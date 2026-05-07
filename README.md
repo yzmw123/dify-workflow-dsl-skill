@@ -52,12 +52,12 @@ treated as the latest schema authority.
 Clone this repository, then run the installer for your agent platform:
 
 ```bash
-git clone https://github.com/<your-name>/dify-workflow-dsl.git
-cd dify-workflow-dsl
+git clone https://github.com/yzmw123/dify-workflow-dsl-skill.git
+cd dify-workflow-dsl-skill
 bash install.sh --platform codex
 ```
 
-Replace `<your-name>` with the final GitHub owner after you publish the repository.
+
 
 Other platforms:
 

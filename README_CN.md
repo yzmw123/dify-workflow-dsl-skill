@@ -48,12 +48,12 @@ Dify 工作流很强，但手工搭建和手写 DSL 都容易踩坑：
 克隆仓库后，按你使用的 Agent 平台安装：
 
 ```bash
-git clone https://github.com/<your-name>/dify-workflow-dsl.git
-cd dify-workflow-dsl
+git clone https://github.com/yzmw123/dify-workflow-dsl-skill.git
+cd dify-workflow-dsl-skill
 bash install.sh --platform codex
 ```
 
-发布仓库后，把 `<your-name>` 替换成你的 GitHub 用户名或组织名。
+
 
 多平台命令：
 
