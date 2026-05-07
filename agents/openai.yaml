@@ -1,0 +1,5 @@
+interface:
+  display_name: "Dify Workflow DSL"
+  short_description: "Author import-ready Dify workflow YAML"
+  brand_color: "#1F8A70"
+  default_prompt: "Use $dify-workflow-dsl to create an import-ready Dify workflow YAML for my automation."
