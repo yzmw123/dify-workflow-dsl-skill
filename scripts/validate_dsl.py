@@ -23,6 +23,7 @@ TERMINAL_BY_MODE = {
 }
 GRAPH_MODES = {"workflow", "advanced-chat"}
 DEPENDENCY_TYPES = {"marketplace", "package", "github"}
+TRIGGER_TYPES = {"trigger-schedule", "trigger-webhook", "trigger-plugin"}
 
 SQL_DANGEROUS_RE = re.compile(r"\b(drop|truncate|alter)\b", re.IGNORECASE)
 SQL_MUTATING_RE = re.compile(r"\b(delete|update)\b", re.IGNORECASE)
@@ -139,7 +140,14 @@ def validate_file(path: Path) -> Report:
 
     terminal = TERMINAL_BY_MODE.get(mode)
     if terminal and terminal not in node_type_by_id.values():
-        report.warn(f"Mode {mode!r} usually needs a reachable {terminal!r} node.")
+        has_trigger = any(node_type in TRIGGER_TYPES for node_type in node_type_by_id.values())
+        if mode == "workflow" and has_trigger:
+            report.warn(
+                "Triggered workflow has no 'end' node. This can be valid for side-effect "
+                "automations, but add an end node if callers need returned outputs."
+            )
+        else:
+            report.warn(f"Mode {mode!r} usually needs a reachable {terminal!r} node.")
 
     edge_ids: set[str] = set()
     for index, edge in enumerate(edges):

@@ -38,8 +38,9 @@ Dify app DSL generation.
   values.
 - Use `kind: app`.
 - Prefer graph-based `workflow` and `advanced-chat` modes for new work.
-- Use old public DSLs as compatibility evidence only. The three sampled public
-  repositories currently contain no `0.6.0` app DSL files.
+- Use public DSLs as compatibility and workflow-design evidence only. Most
+  sampled public repositories are legacy exports; a later scan found a small
+  public `0.6.0` sample, but official source remains the target authority.
 
 ## Import And Version Compatibility
 
@@ -211,6 +212,11 @@ Version scan on 2026-05-07:
 - Official Dify workflow fixtures checked locally: 24 parsed app DSL,
   versions `0.3.1` to `0.5.0`, `0.6.0`: 0
 
+Additional scan on 2026-05-11:
+
+- `g-krishna0/dify-export-test`: 87 parsed app DSL, `0.6.0`: 0
+- `Petrus-Han/dify-usecase-playground`: 3 parsed app DSL, `0.6.0`: 1
+
 Therefore the skill targets 0.6.0 from official source code and uses public YAML
-corpora only for real-world graph patterns, legacy import behavior, and tool-node
-shape diversity.
+corpora only for real-world graph patterns, trigger workflow examples, legacy
+import behavior, and tool-node shape diversity.

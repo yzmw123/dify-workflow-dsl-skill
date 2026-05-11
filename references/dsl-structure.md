@@ -41,7 +41,9 @@ Primary sources used for this skill:
 - Sample workflow repositories:
   https://github.com/BannyLon/DifyAIA,
   https://github.com/svcvit/Awesome-Dify-Workflow,
-  https://github.com/wwwzhouhui/dify-for-dsl
+  https://github.com/wwwzhouhui/dify-for-dsl,
+  https://github.com/g-krishna0/dify-export-test,
+  https://github.com/Petrus-Han/dify-usecase-playground
 
 ## Top-Level YAML
 
@@ -98,13 +100,15 @@ workflow:
 
 | mode | Typical use | Input source | Terminal node |
 | --- | --- | --- | --- |
-| `workflow` | one-shot automation or batch processing | start node variables | `end` |
+| `workflow` | one-shot, batch, triggered, or integration automation | start variables or trigger payload | `end`; side-effect trigger flows may finish at a tool |
 | `advanced-chat` | Chatflow with multi-turn chat | `sys.query`, `sys.files`, conversation variables | `answer` |
 | `chat` | legacy/simple chat app | model config | model config |
 | `completion` | legacy completion app | model config/start inputs | model config |
 | `agent-chat` | legacy agent chat app | model config | model config |
 
-For new generated DSL, prefer `workflow` or `advanced-chat`.
+For new generated DSL, prefer `workflow` or `advanced-chat`. Default to
+`workflow` unless the user needs Chatflow behavior such as multi-turn memory,
+`sys.query`, `sys.files`, or answer streaming.
 
 ## Dependencies
 

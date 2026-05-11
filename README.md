@@ -16,18 +16,22 @@ patterns into a reusable skill.
 
 During the research process, I systematically studied Dify's official source
 code, my own exported DSL files, and multiple public DSL example repositories.
-Those public repositories include 172 parseable Dify app DSL files, covering real
+Those public repositories include 262 parseable Dify app DSL files, covering real
 Chatflow, Workflow, Agent, database read/write, plugin tool, knowledge base, file
-processing, branching, and loop scenarios.
+processing, triggered integration, branching, and loop scenarios.
 
 One important detail: most public DSL examples were exported from older Dify
-versions, and the checked public corpus does not currently include `0.6.0` app
-DSL exports. For that reason, this project uses Dify's official source code as
+versions. A small newer sample now includes `0.6.0`, but the corpus is still
+mostly legacy. For that reason, this project uses Dify's official source code as
 the authority for new `0.6.0` DSL generation, while using the public DSL corpus
-as practical reference material for compatibility, graph structure, and tool-node
-patterns.
+as practical reference material for compatibility, graph structure, trigger
+workflows, and tool-node patterns.
 
 中文说明见 [README_CN.md](./README_CN.md).
+
+**Current release: V2.0.** The earlier version was effectively V1.0: it
+established the import-ready Dify DSL baseline. V2.0 adds deeper real-world YAML
+learning, business use-case routing, and Agent Skills specification alignment.
 
 ## Why This Exists
 
@@ -46,6 +50,41 @@ into one reusable package.
 For new workflows, the skill defaults to `version: "0.6.0"`, the current version
 declared by Dify source. Older public DSLs are still valuable, but they are not
 treated as the latest schema authority.
+
+For new app creation, the skill defaults to Dify `workflow` mode. It switches or
+offers `advanced-chat` when the user needs Chatflow behavior such as multi-turn
+memory, `sys.query`, chat file upload, or `answer` nodes.
+
+## V2.0 Update Notes
+
+V1.0 focused on making the agent able to write valid, import-ready Dify DSL:
+official `0.6.0` structure, node schemas, graph wiring, plugin dependencies,
+database tool patterns, and a local validator.
+
+V2.0 goes further: it teaches the agent how to choose the right workflow shape
+for a business request, not only how to fill YAML fields.
+
+- Expanded the public YAML corpus from 172 to 262 parseable Dify app DSL files.
+- Studied three additional sources:
+  `TheOneWithChair/Dify-DSL-generator`,
+  `g-krishna0/dify-export-test`, and
+  `Petrus-Han/dify-usecase-playground`.
+- Added a default mode strategy: create `workflow` by default, and use
+  `advanced-chat` only when Chatflow behavior is needed.
+- Added `references/usecase-node-selection.md` to map business needs to modes,
+  triggers, node patterns, and reliability rules.
+- Added stronger guidance for schedule, webhook, plugin-trigger, Slack, Feishu,
+  email, GitHub sync, document extraction, form validation, RAG, and reusable
+  workflow-tool scenarios.
+- Updated the validator so trigger-based side-effect workflows without `end`
+  produce a precise warning instead of a generic terminal-node warning.
+- Checked the skill against the Agent Skills specification and Anthropic's public
+  skills examples; the install payload is now limited to the files the skill
+  actually uses.
+
+V2.0 still targets official Dify app DSL `version: "0.6.0"` for new generation.
+Public examples are used as real-world design evidence, not as the source of
+truth for the latest schema.
 
 ## Installation
 
@@ -94,6 +133,8 @@ to overwrite a previous installation.
 ## What It Can Do
 
 - Generate import-ready `workflow` and `advanced-chat` Dify DSL YAML.
+- Recommend `workflow` vs `advanced-chat` and choose node patterns from business
+  requirements.
 - Target official Dify app DSL `version: "0.6.0"` for new files.
 - Create common nodes: Start, End, Answer, LLM, Code, IF/ELSE, HTTP Request,
   Template Transform, Variable Aggregator, Assigner, Document Extractor,
@@ -201,7 +242,8 @@ mistakes such as trailing commas in `INSERT` column lists.
 │   ├── node-schemas.md
 │   ├── official-0.6-target.md
 │   ├── plugin-marketplace-tools.md
-│   └── real-world-yml-study.md
+│   ├── real-world-yml-study.md
+│   └── usecase-node-selection.md
 ├── scripts/
 │   └── validate_dsl.py
 ├── README.md
@@ -247,6 +289,11 @@ public Dify DSL/workflow examples. Special thanks to:
 - DifyAIA: https://github.com/BannyLon/DifyAIA
 - Awesome-Dify-Workflow: https://github.com/svcvit/Awesome-Dify-Workflow
 - dify-for-dsl: https://github.com/wwwzhouhui/dify-for-dsl
+- Dify DSL generator: https://github.com/TheOneWithChair/Dify-DSL-generator
+- dify-export-test: https://github.com/g-krishna0/dify-export-test
+- dify-usecase-playground: https://github.com/Petrus-Han/dify-usecase-playground
+- Agent Skills specification: https://agentskills.io/specification
+- Anthropic skills examples: https://github.com/anthropics/skills
 
 ## Useful Links
 

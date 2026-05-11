@@ -99,10 +99,6 @@ copy_skill() {
     "agents"
     "references"
     "scripts"
-    "README.md"
-    "README_CN.md"
-    "install.sh"
-    ".gitignore"
   )
 
   echo "Installing $SKILL_NAME for $platform"

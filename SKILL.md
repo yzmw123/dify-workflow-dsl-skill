@@ -15,25 +15,44 @@ workflow variables/features, and a ReactFlow-like graph of nodes and edges.
 
 ## Core Workflow
 
-1. Clarify only import-blocking requirements: app mode (`workflow` or `advanced-chat`),
+1. Start with mode intake. For new DSL, default to `workflow`. Use or offer
+   `advanced-chat` only when the user needs Chatflow behavior: multi-turn chat,
+   memory, `sys.query`, `sys.files`, streaming answers, or `answer` nodes.
+2. Clarify only import-blocking requirements: app mode (`workflow` or `advanced-chat`),
    required inputs, model/provider, installed plugins, knowledge bases, secrets,
-   and expected outputs.
-2. Choose the DSL version. For new DSL, target official Dify app DSL
+   trigger source, and expected outputs. If the user has not chosen a mode, say
+   that you will proceed with `workflow` by default unless they prefer Chatflow.
+3. Choose the DSL version. For new DSL, target official Dify app DSL
    `version: "0.6.0"` unless the user explicitly asks for old-version
    compatibility. Always write `version` as a YAML string.
-3. Sketch the graph before writing YAML: start/input, transform/reasoning nodes,
+4. Sketch the graph before writing YAML: start/input or trigger, transform/reasoning nodes,
    tools, branches/loops, final `end` or `answer`.
-4. Use stable string node IDs and connect every edge with matching `sourceType`,
+5. Use stable string node IDs and connect every edge with matching `sourceType`,
    `targetType`, `sourceHandle`, and `targetHandle`.
-5. Add `dependencies` for every plugin-backed LLM provider, tool, agent, knowledge
+6. Add `dependencies` for every plugin-backed LLM provider, tool, agent, knowledge
    feature, and model config. Support marketplace, package, and GitHub dependency
    entries; use exact exported plugin identifiers when available.
-6. For any plugin/tool not covered by existing examples, follow
+7. For any plugin/tool not covered by existing examples, follow
    `references/plugin-marketplace-tools.md`: prefer a minimal exported DSL from
    the user's Dify workspace, then plugin source/package metadata, then marketplace
    pages. Be explicit about reliability when exact tool schemas are unavailable.
-7. Validate locally with `python3 scripts/validate_dsl.py <file.yml>` before giving
+8. Validate locally with `python3 scripts/validate_dsl.py <file.yml>` before giving
    the user the YAML path.
+
+## New DSL Intake
+
+Use this compact intake when creating a workflow from a plain-language request:
+
+- **Mode**: default `workflow`; choose `advanced-chat` for Chatflow, memory, or
+  conversational answer nodes.
+- **Trigger**: manual start variables, chat input, schedule, webhook, plugin event,
+  or another workflow calling this one as a tool.
+- **Inputs**: text, files, structured JSON, form fields, dataset IDs, external event
+  payload, or tool credentials.
+- **Output**: returned `end` values, chat `answer`, side-effect tool action
+  (Slack/Feishu/email/DB/API), or generated file.
+- **Shape**: straight-line transform, branch classifier, extractor/validator,
+  retrieval-augmented answer, loop/iteration over records, or agent with tools.
 
 ## Reference Map
 
@@ -48,17 +67,21 @@ Load only the relevant reference files:
 - `references/database-tools.md` for PostgreSQL/SQL read-write tool nodes,
   including `spance/db_client_node` and `hjlarry/database` patterns from the
   user's exported DSLs.
+- `references/usecase-node-selection.md` for choosing workflow vs Chatflow,
+  trigger style, and node combinations from business requirements.
 - `references/plugin-marketplace-tools.md` for defining new plugin tool nodes from
   Dify Marketplace, GitHub plugin repos, `.difypkg` packages, or minimal exports.
-- `references/real-world-yml-study.md` for observations from 172 parsed public
-  Dify app DSL files and 39 detailed representative legacy samples. These samples
-  are real-world compatibility evidence, not the target version authority.
+- `references/real-world-yml-study.md` for observations from 262 parsed public
+  Dify app DSL files, an AI DSL generator project, and representative samples.
+  These samples are real-world compatibility evidence, not the target version
+  authority.
 - `references/complete-examples.md` for full importable examples and graph layouts.
 
 ## Required Decisions
 
-- **Mode**: use `workflow` for one-shot runs with `end`; use `advanced-chat` for
-  Chatflow, `sys.query`, `sys.files`, memory, and `answer` nodes.
+- **Mode**: default to `workflow` for one-shot, batch, triggered, integration,
+  and side-effect automations; use `advanced-chat` for Chatflow, `sys.query`,
+  `sys.files`, memory, and `answer` nodes.
 - **Inputs**: in `workflow`, define start `variables`; in `advanced-chat`, keep
   start variables empty unless the app needs explicit form inputs.
 - **Secrets**: do not hardcode real API keys, DB passwords, or webhook secrets.
@@ -109,7 +132,9 @@ Load only the relevant reference files:
 Before finalizing a DSL:
 
 - YAML parses cleanly.
-- `version` is a string and `app.mode` matches terminal node type.
+- `version` is a string and `app.mode` matches terminal node type:
+  non-trigger `workflow` uses `end`, `advanced-chat` uses `answer`, and
+  trigger/side-effect workflows document why they may finish at a tool.
 - Dependencies cover all plugin-backed nodes.
 - All graph edges resolve to existing nodes and matching data types.
 - Start variables, conversation variables, and environment variables have unique

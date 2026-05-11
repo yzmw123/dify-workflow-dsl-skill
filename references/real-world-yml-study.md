@@ -9,11 +9,16 @@ corpus is older.
 ## Contents
 
 - Corpus checked
+- Additional corpus checked on 2026-05-11
 - Detailed samples
+- Additional detailed samples
 - Observed version and mode reality
 - Tool node reality
+- Trigger and integration reality
+- Business workflow reality
 - Dependency reality
 - Canvas and helper nodes
+- Generator project lessons
 - Rule corrections for this skill
 
 ## Corpus Checked
@@ -36,6 +41,41 @@ Version scan on 2026-05-07:
 Conclusion: these samples are valuable real-world DSL evidence, but only as
 legacy/import-shape and workflow-design material. Target new generation from
 `references/official-0.6-target.md`.
+
+## Additional Corpus Checked On 2026-05-11
+
+Repositories inspected:
+
+- `g-krishna0/dify-export-test`: 87 YAML files under `dsl/`, all 87 parsed as
+  Dify apps. All use `version: 0.3.1`; modes are 50 `workflow` and 37
+  `advanced-chat`.
+- `Petrus-Han/dify-usecase-playground`: 3 YAML files under `usecases/`, all 3
+  parsed as Dify apps. Two use `version: 0.5.0`; one uses `version: 0.6.0`; all
+  are `workflow`.
+- `TheOneWithChair/Dify-DSL-generator`: not a sample DSL corpus, but useful as a
+  competing generation design. It uses a UI intake for workflow type, complexity,
+  required tools, expected input/output, validation, refinement, and a node-doc
+  library. It depends on Gemini, which this skill does not need; here the reusable
+  lesson is better intake and reference organization.
+
+Aggregate public corpus after this pass: 262 parsed Dify app DSL files
+(172 earlier files + 90 new files). Most are still legacy exports. The new
+`dify-usecase-playground` sample proves public `0.6.0` exports exist, but the
+sample size is tiny; official Dify source remains the authority for new DSL.
+
+New corpus stats:
+
+- `dify-export-test`: node counts range from 3 to 190, median 15. Top node types:
+  `code` 744, `answer` 561, `if-else` 507, `assigner` 416,
+  `template-transform` 259, `llm` 202, `http-request` 133, `tool` 90, `end` 100.
+- `dify-export-test` tool providers: `workflow` 69 and `builtin` 21. This is
+  strong evidence that exported Dify workflows are often composed as reusable
+  sub-workflow tools.
+- `dify-usecase-playground`: node counts 3, 8, and 14. Node types include
+  `trigger-schedule`, `trigger-webhook`, `trigger-plugin`, `agent`, `tool`, `llm`,
+  `question-classifier`, `if-else`, and `code`.
+- New dependency evidence remains mostly marketplace: `dify-export-test` has 72
+  marketplace dependency entries; `dify-usecase-playground` has 4.
 
 ## Detailed Samples
 
@@ -87,14 +127,80 @@ legacy/import-shape and workflow-design material. Target new generation from
 - `58-dify案例分享-中小学数学错题本-生成同类型题.yml`: advanced-chat, `0.3.0`, database, time, Markdown export, iteration, question classifier.
 - `57-dify案例分享-中小学数学错题本-错题收集篇.yml`: advanced-chat, `0.3.0`, database + PDF process + iteration.
 
+## Additional Detailed Samples
+
+### g-krishna0/dify-export-test
+
+- `Dify_Dsl_Github_Sync_Cron_OPTIMISED__v30.yml`: workflow, `0.3.1`, scheduled
+  or manually run DSL sync pattern. Uses code-heavy state/diff/export logic with
+  iteration helpers. Lesson: when logic is API pagination, state files, GitHub
+  commits, and normalized diffs, a few robust code nodes are clearer than a large
+  graph of small nodes.
+- `Auto_KB_Metadata_Extractor_v4.1.yml`: workflow, `0.3.1`, Dify Knowledge Base
+  metadata update. Uses HTTP requests, code parsing, if-else validation, LLM
+  extraction, iteration, and multiple error end paths. Lesson: external Dify API
+  automations need explicit failure branches for missing IDs, empty segments, API
+  errors, and partial success.
+- `Graph_Data_Extractor.yml`: workflow, `0.3.1`, file upload graph/chart data
+  extraction. Uses several LLM passes plus code/template. Lesson: visual or
+  document extraction workflows benefit from separating detection, extraction,
+  anti-hallucination verification, and final table formatting.
+- `Table_Data_Extractor__PDF_v6.yml`: workflow, `0.3.1`, PDF table extraction.
+  Uses code-heavy pdfplumber-style extraction, LLM cleanup, iteration, and
+  template output. Lesson: for large documents, deterministic extraction before
+  LLM cleanup saves tokens and reduces hallucination.
+- `Travel_Expenses_Form3_Validator.yml`: workflow, `0.3.1`, form validation and
+  deficiency email generation. Uses document extraction, knowledge retrieval,
+  variable aggregation, template transform, code, and end. Lesson: validation
+  workflows should use code for rule checks and templates for stable messages.
+- `SharePoint_Connector_Graph_API.yml`: workflow, `0.3.1`, Microsoft Graph
+  connector without a Dify plugin. Uses HTTP request, code, if-else, and variable
+  aggregator. Lesson: when no plugin exists, REST + code can emulate a connector,
+  but secrets must be environment variables/placeholders.
+- `D11QAEmail.yml`: advanced-chat, `0.3.1`, PC inspection support bot that calls
+  reusable workflows for bilingual processing, file validation, Excel extraction,
+  FAQ lookup, and email generation. Lesson: Chatflow is appropriate when the user
+  stays in a support conversation and reusable workflow tools do the heavy work.
+- `The_Smart_Voyager.yml`: advanced-chat, `0.3.1`, travel planner that delegates
+  experience, visa, logistics, and itinerary steps to workflow-provider tools.
+  Lesson: complex assistants can be Chatflow shells over smaller Workflow tools.
+- Repeated Excel extractor files: workflow, `0.3.1`, file upload plus
+  `document-extractor`, `list-operator`, `excel_2_csv` tool, code cleanup, LLM,
+  and several end branches. Lesson: file conversion and deterministic cleanup
+  should happen before asking an LLM to infer fields.
+
+Common tool names in this repo:
+
+- Workflow-provider tools: `comBilingualWorkflow` 19, `excel_extractor_v4` 17,
+  `comFileValidator` 16, `email_gen_v1` 6, `PC_inspection` 4.
+- Built-in tools: `md_to_pdf` 11, `excel_2_csv` 7, `word_2_pdf` 2, `zip` 1.
+
+### Petrus-Han/dify-usecase-playground
+
+- `daily-news-slack/workflow.yml`: workflow, `0.5.0`, schedule trigger -> agent
+  with Yahoo/current-time tools -> Slack webhook. Lesson: scheduled digests are
+  Workflow, not Chatflow; the output can be a side-effect tool call.
+- `slack-news-researcher/workflow.yml`: workflow, `0.5.0`, plugin trigger ->
+  question classifier -> agent/LLM branches -> Slack webhook. Lesson: message
+  event workflows can classify whether to use research tools or generate a normal
+  response before sending back to Slack.
+- `confluence-to-feishu/workflow.yml`: workflow, `0.6.0`, webhook trigger ->
+  code payload parsing -> if-else event routing -> Feishu message tools. Lesson:
+  webhook automations should normalize payloads in code first, then branch by
+  event type and build deterministic message cards.
+
 ## Observed Version And Mode Reality
 
 - Public DSLs commonly use `0.1.0` to `0.5.0`; not every runnable workflow uses
   the latest official DSL version.
-- None of the three inspected public repositories currently contains a parsed
-  `version: "0.6.0"` Dify app DSL file.
+- The first three inspected repositories had no parsed `0.6.0` exports. A later
+  2026-05-11 scan found one public `0.6.0` workflow in
+  `Petrus-Han/dify-usecase-playground`, so public `0.6.0` evidence exists but is
+  still sparse.
 - `advanced-chat` dominates recent examples; `workflow` remains common for batch
   runs and multi-end automation.
+- Triggered integration automations in the new samples use `workflow`, even when
+  they respond into Slack/Feishu rather than returning a normal `end` output.
 - `agent-chat` examples often use top-level `model_config`, not
   `workflow.graph.nodes`.
 - Some YAML files write `version: 0.3.0` without quotes. YAML parsers commonly
@@ -115,6 +221,62 @@ Real tool nodes vary more than the clean schema:
   `model_config.agent_mode.tools`.
 - Workflow-provider tools can reference local/custom workflows with UUID-like
   provider IDs and no marketplace dependency.
+- In `dify-export-test`, workflow-provider tools are the majority of tool nodes.
+  Treat them as powerful but workspace-specific; never invent provider UUIDs.
+
+## Trigger And Integration Reality
+
+- Real trigger workflows may start with `trigger-schedule`, `trigger-webhook`, or
+  `trigger-plugin` instead of a `start` node.
+- Public trigger samples may omit an `end` node when the job's purpose is a
+  side-effect such as Slack/Feishu notification. For user-run workflows where the
+  caller needs returned values, still include `end`.
+- Schedule exports include both `cron_expression` and visual config/timezone
+  fields; these may need reconfiguration after import.
+- Webhook exports keep `webhook_url` and `webhook_debug_url` empty. Do not fill
+  them with fake URLs.
+- Plugin trigger schemas are plugin-specific. Copy from a current export rather
+  than extrapolating.
+
+## Business Workflow Reality
+
+- File and office-document workflows often combine file upload, document
+  extraction/conversion tools, code cleanup, LLM interpretation, if-else error
+  branches, and templated outputs.
+- Enterprise approval, inspection, travel expense, and QA workflows are usually
+  `workflow` when they transform or validate records, but `advanced-chat` when a
+  human continues asking follow-up questions.
+- Integration workflows often need secrets and endpoint IDs as environment
+  variables. Public examples sometimes embed placeholders or static-looking
+  descriptions; generated DSL should not hardcode real tokens.
+- Complex assistant products can be designed as a Chatflow shell that delegates
+  deterministic sub-tasks to smaller Workflow apps exposed as workflow-provider
+  tools.
+- For stateful sync jobs, code nodes can legitimately carry most of the logic
+  because Dify graph nodes are less ergonomic for API pagination, diffing,
+  packaging, and commit state.
+
+## Generator Project Lessons
+
+`TheOneWithChair/Dify-DSL-generator` is similar in goal but wraps generation in a
+Streamlit app and Gemini API. Useful ideas to borrow:
+
+- Ask or infer workflow type early: Chatflow maps to Dify `advanced-chat`; normal
+  automations map to `workflow`.
+- Capture expected input, expected output, required tools, and complexity before
+  writing YAML.
+- Keep node docs in separate files and load only relevant node references.
+- Validate and post-process generated YAML instead of trusting raw model output.
+- Support refinement of an existing DSL from natural-language feedback.
+
+Differences for this skill:
+
+- Do not require `GEMINI_API_KEY`, `DIFY_API_KEY`, or a Streamlit UI. The agent
+  using this skill is the generator.
+- Target official `version: "0.6.0"` for new DSL, while treating old samples as
+  compatibility/workflow-design evidence.
+- Prefer exported plugin/tool nodes for reliability instead of synthesizing exact
+  plugin schemas from names alone.
 
 ## Dependency Reality
 
@@ -175,6 +337,9 @@ MCP, API, or workflow tools.
 - Treat `custom-note` as valid non-executable metadata.
 - Treat `agent-chat`, `chat`, and `completion` as model-config apps, not graph
   workflows, unless a graph is present.
+- Default generated apps to `workflow`; switch to `advanced-chat` for Chatflow,
+  memory, `sys.query`, `sys.files`, and `answer` nodes.
+- Treat trigger-driven Slack/Feishu/webhook/schedule automations as `workflow`.
 - Prefer generated `workflow` or `advanced-chat` for new work, but understand
   legacy/public DSLs when reviewing or adapting.
 - For new generated DSL, use official `version: "0.6.0"` and only borrow graph

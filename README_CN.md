@@ -15,16 +15,20 @@ AI 自动生成可以导入 Dify 的工作流文件。
 
 当前 skill 的目标版本是 Dify 官方源码声明的 app DSL `0.6.0`。在整理过程中，
 我系统学习了 Dify 官方源码、自己的导出文件，以及多个公开 DSL 示例仓库。
-这些公开仓库一共提供了 172 个可解析的 Dify app DSL，覆盖了 Chatflow、
-Workflow、Agent、数据库读写、插件工具、知识库、文件处理、分支、循环等
-大量真实场景。
+这些公开仓库一共提供了 262 个可解析的 Dify app DSL，覆盖了 Chatflow、
+Workflow、Agent、数据库读写、插件工具、知识库、文件处理、触发器集成、
+分支、循环等大量真实场景。
 
-需要说明的是，公开仓库里的 DSL 大多来自旧版本 Dify，当前样本中没有
-`0.6.0` 的 app DSL 导出。因此，本项目以 Dify 官方源码作为新 DSL 生成的
-权威依据，同时把这些公开 DSL 作为旧版本兼容性、真实图结构和工具节点写法
-的参考。
+需要说明的是，公开仓库里的 DSL 大多来自旧版本 Dify。新的样本中已经出现
+少量 `0.6.0` 导出，但整体仍以旧版为主。因此，本项目以 Dify 官方源码作为
+新 DSL 生成的权威依据，同时把这些公开 DSL 作为旧版本兼容性、真实图结构、
+触发器工作流和工具节点写法的参考。
 
 English version: [README.md](./README.md)
+
+**当前版本：V2.0。** 之前的版本可以视为 V1.0：它解决的是“让 Agent 能写出
+可导入 Dify 的 DSL”这个基础问题。V2.0 在此基础上继续强化真实 YAML 学习、
+业务场景判断，以及 Agent Skills 规范对齐。
 
 ## 它解决什么问题
 
@@ -42,6 +46,37 @@ Dify 工作流很强，但手工搭建和手写 DSL 都容易踩坑：
 
 新生成的工作流默认使用 `version: "0.6.0"`。公开仓库里的旧版 DSL 仍然很有
 价值，但不会被当作最新版 schema 的权威来源。
+
+新建应用时，skill 默认按 Dify `workflow` 模式生成；当用户需要多轮对话、
+记忆、`sys.query`、聊天文件上传或 `answer` 节点时，再切换或建议
+`advanced-chat`。
+
+## V2.0 更新说明
+
+V1.0 的重点是让 Agent 能写出可导入、结构正确的 Dify DSL：官方 `0.6.0`
+结构、节点 schema、图连接、插件依赖、数据库工具模式，以及本地校验脚本。
+
+V2.0 的重点更进一步：不只是会填 YAML 字段，而是让 Agent 更懂“用户这个
+业务需求适合什么模式、什么触发方式、什么节点组合”。
+
+- 公开 YAML 学习语料从 172 个可解析 Dify app DSL 扩展到 262 个。
+- 新增学习了三个来源：
+  `TheOneWithChair/Dify-DSL-generator`、
+  `g-krishna0/dify-export-test`、
+  `Petrus-Han/dify-usecase-playground`。
+- 明确默认模式策略：新建应用默认生成 `workflow`；只有需要 Chatflow 行为时，
+  才使用 `advanced-chat`。
+- 新增 `references/usecase-node-selection.md`，把业务需求映射到模式选择、
+  触发器、节点模式和可靠性规则。
+- 强化了定时触发、Webhook、插件事件、Slack、飞书、邮件、GitHub 同步、
+  文档提取、表单校验、RAG、复用工作流工具等场景的经验。
+- 更新校验脚本：触发器类 side-effect workflow 没有 `end` 时，会给出更准确
+  的提醒，而不是泛泛提示缺少终止节点。
+- 对照 Agent Skills specification 和 Anthropic 官方 skills 示例检查结构；
+  安装脚本现在只复制 skill 真正需要的文件，保持安装目录更精简。
+
+V2.0 仍然默认面向官方 Dify app DSL `version: "0.6.0"`。公开样例用于学习
+真实业务图结构和兼容性经验，不作为最新版 schema 的唯一权威来源。
 
 ## 安装
 
@@ -106,6 +141,7 @@ AI 就可以基于这个 skill 生成 YAML、节点、边、工具参数、数�
 ## 能做什么
 
 - 生成可导入 Dify 的 `workflow` 和 `advanced-chat` DSL YAML。
+- 根据业务需求判断应该用 `workflow` 还是 `advanced-chat`，并选择合适节点组合。
 - 新文件默认面向官方 Dify app DSL `version: "0.6.0"`。
 - 编写常见节点：Start、End、Answer、LLM、Code、IF/ELSE、HTTP Request、
   Template Transform、Variable Aggregator、Assigner、Document Extractor、
@@ -192,7 +228,8 @@ python3 scripts/validate_dsl.py examples/*.yml
 │   ├── node-schemas.md
 │   ├── official-0.6-target.md
 │   ├── plugin-marketplace-tools.md
-│   └── real-world-yml-study.md
+│   ├── real-world-yml-study.md
+│   └── usecase-node-selection.md
 ├── scripts/
 │   └── validate_dsl.py
 ├── README.md
@@ -233,6 +270,11 @@ python3 scripts/validate_dsl.py path/to/workflow.yml
 - DifyAIA: https://github.com/BannyLon/DifyAIA
 - Awesome-Dify-Workflow: https://github.com/svcvit/Awesome-Dify-Workflow
 - dify-for-dsl: https://github.com/wwwzhouhui/dify-for-dsl
+- Dify DSL generator: https://github.com/TheOneWithChair/Dify-DSL-generator
+- dify-export-test: https://github.com/g-krishna0/dify-export-test
+- dify-usecase-playground: https://github.com/Petrus-Han/dify-usecase-playground
+- Agent Skills specification: https://agentskills.io/specification
+- Anthropic skills examples: https://github.com/anthropics/skills
 
 ## 相关链接
 
