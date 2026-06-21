@@ -26,6 +26,28 @@ Workflow、Agent、数据库读写、插件工具、知识库、文件处理、�
 
 English version: [README.md](./README.md)
 
+## 欢迎关注微信公众号
+
+欢迎关注我的微信公众号：**硅基斥候 S01**。目前账号刚起步，如果觉得这个
+skill 对你有帮助，请帮我涨个粉丝。我会持续发布自己亲测后觉得好用的
+skill，以及 AI 相关的资讯和知识。
+
+**侦查方向**
+
+硅基斥候 S01 关注大语言模型、AI Agent、AI 编程与工具链、产品实测、政企
+AI 落地，以及政策、安全与合规。
+
+**为什么叫斥候？**
+
+斥候先进入未知区域探虚实，再把有用的情报带回来。
+
+放到 AI 语境里，S01 做的就是亲测新模型、新工具和新产品，核对风险边界，
+把可行动的判断说清楚。
+
+我自己开源的其他项目也会第一时间在公众号公布。
+
+<img src="./assets/wechat-official-account.jpg" alt="硅基斥候 S01 微信公众号二维码" width="220">
+
 **当前版本：V2.0。** 之前的版本可以视为 V1.0：它解决的是“让 Agent 能写出
 可导入 Dify 的 DSL”这个基础问题。V2.0 在此基础上继续强化真实 YAML 学习、
 业务场景判断，以及 Agent Skills 规范对齐。
@@ -220,6 +242,8 @@ python3 scripts/validate_dsl.py examples/*.yml
 ├── SKILL.md
 ├── agents/
 │   └── openai.yaml
+├── assets/
+│   └── wechat-official-account.jpg
 ├── install.sh
 ├── references/
 │   ├── complete-examples.md

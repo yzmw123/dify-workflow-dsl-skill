@@ -29,6 +29,32 @@ workflows, and tool-node patterns.
 
 中文说明见 [README_CN.md](./README_CN.md).
 
+## Follow Silicon Scout S01 On WeChat
+
+Welcome to follow my WeChat Official Account: **硅基斥候 S01 (Silicon
+Scout S01)**. The account is still just getting started, so if this skill helps
+you, a follow would mean a lot. I will keep sharing practical skills I
+personally find useful, plus AI news, knowledge, and notes.
+
+**Recon focus**
+
+Silicon Scout S01 follows large language models, AI agents, AI coding and
+toolchains, hands-on product tests, enterprise and government AI adoption, and
+policy, security, and compliance.
+
+**Why "Scout"?**
+
+A scout enters unknown territory first, checks what is real, and brings back
+useful intelligence.
+
+In the AI context, S01 does that by personally testing new models, tools, and
+products, checking their risk boundaries, and explaining the actionable
+takeaways clearly.
+
+My other open-source projects will also be announced on this account first.
+
+<img src="./assets/wechat-official-account.jpg" alt="WeChat Official Account QR code for Silicon Scout S01" width="220">
+
 **Current release: V2.0.** The earlier version was effectively V1.0: it
 established the import-ready Dify DSL baseline. V2.0 adds deeper real-world YAML
 learning, business use-case routing, and Agent Skills specification alignment.
@@ -234,6 +260,8 @@ mistakes such as trailing commas in `INSERT` column lists.
 ├── SKILL.md
 ├── agents/
 │   └── openai.yaml
+├── assets/
+│   └── wechat-official-account.jpg
 ├── install.sh
 ├── references/
 │   ├── complete-examples.md
