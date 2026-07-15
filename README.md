@@ -138,6 +138,9 @@ bash install.sh --platform openclaw
 
 # Hermes
 bash install.sh --platform hermes
+
+# OpenCode
+bash install.sh --platform opencode
 ```
 
 Install to all supported default locations:
@@ -155,6 +158,10 @@ bash install.sh --platform codex --target-dir "$HOME/.codex/skills/dify-workflow
 The installer is intentionally simple: it copies `SKILL.md`, `references/`,
 `scripts/`, and metadata into the target skills directory. Re-run with `--force`
 to overwrite a previous installation.
+
+For OpenCode, the default target is the official global skills directory:
+`$HOME/.config/opencode/skills/dify-workflow-dsl`. Set `OPENCODE_CONFIG_DIR` or
+use `--target-dir` if your OpenCode config lives elsewhere.
 
 ## What It Can Do
 

@@ -126,6 +126,9 @@ bash install.sh --platform openclaw
 
 # Hermes
 bash install.sh --platform hermes
+
+# OpenCode
+bash install.sh --platform opencode
 ```
 
 安装到所有默认支持的平台目录：
@@ -143,6 +146,9 @@ bash install.sh --platform codex --target-dir "$HOME/.codex/skills/dify-workflow
 这个安装脚本的原理很简单：根据 `--platform` 判断目标 skills 目录，然后把
 `SKILL.md`、`references/`、`scripts/` 和元数据复制过去。如果已经安装过，
 可以加 `--force` 覆盖。
+
+OpenCode 默认安装到官方全局 skills 目录：
+`$HOME/.config/opencode/skills/dify-workflow-dsl`。如果你的 OpenCode 配置目录不在默认位置，可以设置 `OPENCODE_CONFIG_DIR`，或者直接用 `--target-dir` 指定。
 
 ## 最大优势
 

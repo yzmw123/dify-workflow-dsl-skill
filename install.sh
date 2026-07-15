@@ -18,18 +18,19 @@ Usage:
   bash install.sh --platform claude
   bash install.sh --platform openclaw
   bash install.sh --platform hermes
+  bash install.sh --platform opencode
   bash install.sh --platform all
   bash install.sh --platform codex --target-dir "$HOME/.codex/skills/dify-workflow-dsl"
 
 Options:
-  --platform <name>   codex | claude | openclaw | hermes | all
+  --platform <name>   codex | claude | openclaw | hermes | opencode | all
   --target-dir <dir>  Override install directory. Not supported with --platform all.
   --force             Overwrite managed files in the target directory.
   --dry-run           Print what would happen without copying files.
   -h, --help          Show this help.
 
 Environment overrides:
-  CODEX_HOME, CLAUDE_HOME, OPENCLAW_HOME, HERMES_HOME
+  CODEX_HOME, CLAUDE_HOME, OPENCLAW_HOME, HERMES_HOME, OPENCODE_CONFIG_DIR
 USAGE
 }
 
@@ -83,6 +84,9 @@ default_target_dir() {
       ;;
     hermes)
       echo "${HERMES_HOME:-$HOME/.hermes}/skills/$SKILL_NAME"
+      ;;
+    opencode)
+      echo "${OPENCODE_CONFIG_DIR:-$HOME/.config/opencode}/skills/$SKILL_NAME"
       ;;
     *)
       echo "Unsupported platform: $platform" >&2
@@ -143,7 +147,7 @@ if [[ "$PLATFORM" == "all" ]]; then
     echo "--target-dir cannot be used with --platform all." >&2
     exit 1
   fi
-  for platform in codex claude openclaw hermes; do
+  for platform in codex claude openclaw hermes opencode; do
     install_platform "$platform"
   done
 else
