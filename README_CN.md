@@ -49,8 +49,10 @@ AI 落地，以及政策、安全与合规。
 
 <img src="./assets/wechat-official-account.jpg" alt="硅基斥候 S01 微信公众号二维码" width="220">
 
-**当前版本：V3.0。** V3.0 新增 DSL 0.7.0、可移植 Agent App、Agent v2
-工作流节点、重构后的机器可读验证器、回归测试集和 CI。
+> **当前版本：V3.0 —— Dify 1.16 / DSL 0.7.0。**
+>
+> 本次更新新增基于 Dify 官方源码的可移植 Agent App 和 Agent v2 工作流节点
+> 生成与校验能力，同时保留面向 Dify 1.15.x 的 DSL 0.6.0 兼容支持。
 
 ## 它解决什么问题
 
@@ -76,10 +78,24 @@ Dify 工作流很强，但手工搭建和手写 DSL 都容易踩坑：
 
 ## V3.0 更新说明
 
+### 版本兼容关系
+
+| Dify 目标版本 | App DSL | 支持方式 |
+| --- | --- | --- |
+| Dify 1.16.x | `"0.7.0"` | 默认目标；已对照 Dify 1.16.0 源码 tag |
+| Dify 1.15.x | `"0.6.0"` | 兼容生成与校验 |
+
+把 DSL 0.7.0 文件导入 Dify 1.15.x 会触发“较新版本”兼容提示。面向 1.15.x
+工作区时，应单独生成并校验 DSL 0.6.0 文件，而不是只修改 `version` 字段。
+
+### Dify 1.16 与 Agent v2 支持内容
+
 - 直接对照 Dify 源码 tag 确认版本边界：1.15.0 使用 DSL 0.6.0，1.16.0
   使用 DSL 0.7.0。
 - 新增 `app.mode: agent`、顶层 `agent`/`agent_packages`、可移植 Agent 包，
   以及 Agent v2 工作流节点规则。
+- 补齐 Agent v2 的 `agent_binding`、`agent_job`、前序输出引用、声明输出、
+  package ref、package metadata、soul config 和 omitted assets 校验。
 - 按官方 form/action schema 修正 Human Input，并校验 action edge handle。
 - 将验证器拆成可复用 Python 包，增加稳定诊断码、文本/JSON 输出、目标版本
   校验和 strict 模式。
@@ -89,6 +105,10 @@ Dify 工作流很强，但手工搭建和手写 DSL 都容易踩坑：
   fixture，并接入 GitHub Actions。
 - 增加规模化生成方法：先规划，再独立生成节点，集中确定性装配/修复，最后
   做结构校验；失败时只重试局部组件。
+
+Agent v2 支持已对照 Dify 1.16.0 tag 源码、项目 fixture 和本地确定性验证器
+进行检查。最终导入与运行仍需要 Dify 1.16.x 工作区验证；工作区里的模型、
+插件、凭据、联系人、Skills 和上传资产，导入后可能需要重新连接或配置。
 
 ## V2.0 更新说明
 
@@ -222,6 +242,14 @@ Use $dify-workflow-dsl to review this Dify YAML and fix import-breaking issues.
 ```text
 Use $dify-workflow-dsl to add a new Dify marketplace tool.
 我已经导出了一个只包含这个工具节点的最小 DSL，请用它作为 schema 来源。
+```
+
+生成 Agent v2 工作流：
+
+```text
+Use $dify-workflow-dsl to create a Dify 1.16.0 workflow using DSL 0.7.0.
+添加一个可移植 Agent v2 节点，声明它的输出，连接 package ref，
+并使用 strict 模式校验生成结果。
 ```
 
 ## 新插件工具的推荐流程

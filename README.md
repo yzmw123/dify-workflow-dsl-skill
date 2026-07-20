@@ -54,8 +54,11 @@ My other open-source projects will also be announced on this account first.
 
 <img src="./assets/wechat-official-account.jpg" alt="WeChat Official Account QR code for Silicon Scout S01" width="220">
 
-**Current release: V3.0.** V3.0 adds DSL 0.7.0, portable Agent App and Agent v2
-support, a refactored machine-readable validator, regression fixtures, and CI.
+> **Current release: V3.0 — Dify 1.16 / DSL 0.7.0.**
+>
+> This release adds source-backed generation and validation for portable Agent
+> Apps and Agent v2 workflow nodes, while retaining DSL 0.6.0 compatibility for
+> Dify 1.15.x.
 
 ## Why This Exists
 
@@ -81,10 +84,25 @@ memory, `sys.query`, chat file upload, or `answer` nodes.
 
 ## V3.0 Update Notes
 
+### Version compatibility
+
+| Dify target | App DSL | Support |
+| --- | --- | --- |
+| Dify 1.16.x | `"0.7.0"` | Default target; verified against the Dify 1.16.0 source tag |
+| Dify 1.15.x | `"0.6.0"` | Compatibility generation and validation |
+
+Importing a DSL 0.7.0 file into Dify 1.15.x triggers a newer-version
+compatibility warning. Generate and validate a separate 0.6.0 file for a 1.15.x
+workspace instead of changing only the version string.
+
+### Dify 1.16 and Agent v2 coverage
+
 - Verified the version transition directly against Dify tags: 1.15.0 uses DSL
   0.6.0 and 1.16.0 uses DSL 0.7.0.
 - Added `app.mode: agent`, top-level `agent`/`agent_packages`, portable Agent
   package rules, and Agent v2 workflow-node schemas.
+- Added Agent v2 `agent_binding`, `agent_job`, previous-output refs, declared
+  outputs, package refs, package metadata, soul config, and omitted-asset checks.
 - Corrected Human Input to the official form/action schema and action-based edge
   handles.
 - Refactored the validator into a reusable Python package with stable diagnostic
@@ -96,6 +114,12 @@ memory, `sys.query`, chat file upload, or `answer` nodes.
   regression tests, and GitHub Actions CI.
 - Added a scale pattern based on Dify 1.16's generator: plan, independent node
   building, deterministic assembly/post-processing, then structural validation.
+
+Agent v2 support is checked against the tagged Dify 1.16.0 source, maintained
+fixtures, and the local deterministic validator. Final import and runtime
+verification still require a Dify 1.16.x workspace. Workspace-specific models,
+plugins, credentials, contacts, skills, and uploaded assets may need to be
+reconnected after import.
 
 ## V2.0 Update Notes
 
@@ -239,6 +263,14 @@ For a new plugin tool:
 Use $dify-workflow-dsl to add the GitHub plugin search tool.
 I have exported a minimal Dify DSL containing that tool node; use it as the schema
 source and adapt it into my workflow.
+```
+
+For an Agent v2 workflow:
+
+```text
+Use $dify-workflow-dsl to create a Dify 1.16.0 workflow using DSL 0.7.0.
+Add a portable Agent v2 node, declare its outputs, connect the package reference,
+and validate the result in strict mode.
 ```
 
 ## Recommended Workflow For New Plugin Tools
