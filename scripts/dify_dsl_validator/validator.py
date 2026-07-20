@@ -72,6 +72,50 @@ AGENT_SOUL_MAPPING_FIELDS = {
     "misc_legacy",
 }
 AGENT_SOUL_LIST_FIELDS = {"config_skills", "config_files", "app_variables"}
+AGENT_SOUL_KNOWLEDGE_FIELDS = {"sets"}
+AGENT_KNOWLEDGE_SET_FIELDS = {
+    "id",
+    "name",
+    "description",
+    "datasets",
+    "query",
+    "retrieval",
+    "metadata_filtering",
+}
+AGENT_KNOWLEDGE_DATASET_FIELDS = {"id", "name", "description"}
+AGENT_KNOWLEDGE_QUERY_FIELDS = {"mode", "value"}
+AGENT_KNOWLEDGE_RETRIEVAL_FIELDS = {
+    "mode",
+    "top_k",
+    "score_threshold",
+    "reranking_mode",
+    "reranking_enable",
+    "reranking_model",
+    "weights",
+    "model",
+}
+AGENT_KNOWLEDGE_RERANKING_MODEL_FIELDS = {"provider", "model"}
+AGENT_KNOWLEDGE_MODEL_FIELDS = {"provider", "name", "mode", "completion_params"}
+AGENT_KNOWLEDGE_METADATA_FIELDS = {"mode", "model_config", "conditions"}
+AGENT_CONFIG_SKILL_FIELDS = {
+    "name",
+    "description",
+    "file_kind",
+    "file_id",
+    "is_missing",
+    "size",
+    "hash",
+    "mime_type",
+}
+AGENT_CONFIG_FILE_FIELDS = {
+    "name",
+    "file_kind",
+    "file_id",
+    "is_missing",
+    "size",
+    "hash",
+    "mime_type",
+}
 AGENT_JOB_FIELDS = {
     "schema_version",
     "mode",
@@ -106,6 +150,15 @@ DECLARED_OUTPUT_CHILD_FIELDS = {
     "array_item",
     "children",
 }
+DECLARED_OUTPUT_CHECK_FIELDS = {
+    "enabled",
+    "prompt",
+    "benchmark_file_ref",
+    "model_ref",
+}
+DECLARED_OUTPUT_FAILURE_FIELDS = {"retry", "on_failure", "default_value"}
+DECLARED_OUTPUT_RETRY_FIELDS = {"enabled", "max_retries", "retry_interval_ms"}
+DECLARED_OUTPUT_FAILURE_MODES = {"stop", "default_value", "fail_branch"}
 HUMAN_INPUT_TYPES = {"paragraph", "select", "file", "file-list"}
 HUMAN_VALUE_SOURCE_TYPES = {"constant", "variable"}
 HUMAN_FILE_TYPES = {"image", "document", "audio", "video", "custom"}
@@ -125,10 +178,12 @@ NON_SELECTOR_LIST_KEYS = {
     "recipients",
     "install_commands",
 }
+SELECTOR_COLLECTION_KEYS = {"variables"}
 
 VAR_REF_RE = re.compile(r"\{\{#([^#{}]+)#\}\}")
 HUMAN_OUTPUT_RE = re.compile(r"\{\{#\$output\.([A-Za-z_][A-Za-z0-9_]{0,29})#\}\}")
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+CONFIG_SKILL_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 NODE_ID_RE = re.compile(r"^[A-Za-z0-9_:-]+$")
 RUNTIME_TEMPLATE_NODE_ID_RE = re.compile(r"^[A-Za-z0-9_]{1,50}$")
 SQL_DESTRUCTIVE_RE = re.compile(r"\b(drop|truncate|alter)\b", re.IGNORECASE)
@@ -463,6 +518,471 @@ class Validator:
                 "AgentSoulConfig model must be a mapping or null.",
                 f"{location}.model",
             )
+        elif isinstance(model, dict):
+            self._validate_agent_soul_model(model, f"{location}.model")
+
+        knowledge = soul.get("knowledge")
+        if isinstance(knowledge, dict):
+            self._validate_agent_soul_knowledge(knowledge, f"{location}.knowledge")
+
+        for field, allowed_fields, kind in (
+            ("config_skills", AGENT_CONFIG_SKILL_FIELDS, "skill"),
+            ("config_files", AGENT_CONFIG_FILE_FIELDS, "file"),
+        ):
+            values = soul.get(field)
+            if isinstance(values, list):
+                self._validate_agent_config_assets(
+                    values,
+                    f"{location}.{field}",
+                    allowed_fields=allowed_fields,
+                    kind=kind,
+                )
+
+    def _validate_agent_soul_model(self, model: dict[str, Any], location: str) -> None:
+        for field in ("plugin_id", "model_provider", "model"):
+            value = model.get(field)
+            if not isinstance(value, str) or not value or len(value) > 255:
+                self.report.error(
+                    "agent.soul-field-type",
+                    f"Agent soul model {field} must contain 1-255 characters.",
+                    f"{location}.{field}",
+                )
+        credential_ref = model.get("credential_ref")
+        if credential_ref is not None:
+            if not isinstance(credential_ref, dict):
+                self.report.error(
+                    "agent.soul-field-type",
+                    "Agent soul model credential_ref must be a mapping or null.",
+                    f"{location}.credential_ref",
+                )
+            else:
+                credential_type = credential_ref.get("type")
+                if (
+                    not isinstance(credential_type, str)
+                    or not credential_type
+                    or len(credential_type) > 64
+                ):
+                    self.report.error(
+                        "agent.soul-field-type",
+                        "Agent soul model credential_ref.type must contain 1-64 characters.",
+                        f"{location}.credential_ref.type",
+                    )
+                for field in ("id", "provider"):
+                    value = credential_ref.get(field)
+                    if value is not None and (not isinstance(value, str) or len(value) > 255):
+                        self.report.error(
+                            "agent.soul-field-type",
+                            f"Agent soul model credential_ref.{field} must be a string of at most 255 characters or null.",
+                            f"{location}.credential_ref.{field}",
+                        )
+        if "model_settings" in model and not isinstance(model["model_settings"], dict):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent soul model model_settings must be a mapping.",
+                f"{location}.model_settings",
+            )
+
+    def _validate_agent_soul_knowledge(self, knowledge: dict[str, Any], location: str) -> None:
+        for field in _unexpected_fields(knowledge, AGENT_SOUL_KNOWLEDGE_FIELDS):
+            self.report.error(
+                "agent.soul-extra-field",
+                f"Agent soul knowledge field {field!r} is not allowed by Dify 1.16.",
+                f"{location}.{field}",
+            )
+        sets = knowledge.get("sets", [])
+        if not isinstance(sets, list):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent soul knowledge.sets must be a list.",
+                f"{location}.sets",
+            )
+            return
+
+        set_ids: list[str] = []
+        set_names: list[str] = []
+        for index, item in enumerate(sets):
+            item_path = f"{location}.sets[{index}]"
+            if not isinstance(item, dict):
+                self.report.error(
+                    "agent.soul-field-type",
+                    "Each Agent knowledge set must be a mapping.",
+                    item_path,
+                )
+                continue
+            for field in _unexpected_fields(item, AGENT_KNOWLEDGE_SET_FIELDS):
+                self.report.error(
+                    "agent.soul-extra-field",
+                    f"Agent knowledge set field {field!r} is not allowed by Dify 1.16.",
+                    f"{item_path}.{field}",
+                )
+            for field in ("id", "name"):
+                value = item.get(field)
+                if (
+                    not isinstance(value, str)
+                    or not value.strip()
+                    or len(value) > 255
+                ):
+                    self.report.error(
+                        "agent.soul-field-type",
+                        f"Agent knowledge set {field} must contain 1-255 non-blank characters.",
+                        f"{item_path}.{field}",
+                    )
+                elif field == "id":
+                    set_ids.append(value.strip())
+                else:
+                    set_names.append(value.strip().lower())
+            description = item.get("description")
+            if description is not None and not isinstance(description, str):
+                self.report.error(
+                    "agent.soul-field-type",
+                    "Agent knowledge set description must be a string or null.",
+                    f"{item_path}.description",
+                )
+            self._validate_agent_knowledge_datasets(item.get("datasets"), f"{item_path}.datasets")
+            self._validate_agent_knowledge_query(item.get("query"), f"{item_path}.query")
+            self._validate_agent_knowledge_retrieval(item.get("retrieval"), f"{item_path}.retrieval")
+            metadata_filtering = item.get("metadata_filtering", {})
+            if not isinstance(metadata_filtering, dict):
+                self.report.error(
+                    "agent.soul-field-type",
+                    "Agent knowledge metadata_filtering must be a mapping.",
+                    f"{item_path}.metadata_filtering",
+                )
+            else:
+                for field in _unexpected_fields(metadata_filtering, AGENT_KNOWLEDGE_METADATA_FIELDS):
+                    self.report.error(
+                        "agent.soul-extra-field",
+                        f"Agent knowledge metadata_filtering field {field!r} is not allowed by Dify 1.16.",
+                        f"{item_path}.metadata_filtering.{field}",
+                    )
+                mode = metadata_filtering.get("mode", "disabled")
+                if not isinstance(mode, str) or mode not in {"disabled", "automatic", "manual"}:
+                    self.report.error(
+                        "agent.soul-field-type",
+                        "Agent knowledge metadata_filtering.mode must be disabled, automatic, or manual.",
+                        f"{item_path}.metadata_filtering.mode",
+                    )
+                for field in ("model_config", "conditions"):
+                    value = metadata_filtering.get(field)
+                    if value is not None and not isinstance(value, dict):
+                        self.report.error(
+                            "agent.soul-field-type",
+                            f"Agent knowledge metadata_filtering.{field} must be a mapping or null.",
+                            f"{item_path}.metadata_filtering.{field}",
+                        )
+
+        if len(set_ids) != len(set(set_ids)):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge set ids must be unique.",
+                f"{location}.sets",
+            )
+        if len(set_names) != len(set(set_names)):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge set names must be unique case-insensitively.",
+                f"{location}.sets",
+            )
+
+    def _validate_agent_knowledge_datasets(self, value: Any, location: str) -> None:
+        if not isinstance(value, list) or not value:
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge set datasets must be a non-empty list.",
+                location,
+            )
+            return
+        dataset_ids: list[str] = []
+        for index, dataset in enumerate(value):
+            item_path = f"{location}[{index}]"
+            if not isinstance(dataset, dict):
+                self.report.error(
+                    "agent.soul-field-type",
+                    "Agent knowledge dataset must be a mapping.",
+                    item_path,
+                )
+                continue
+            for field in _unexpected_fields(dataset, AGENT_KNOWLEDGE_DATASET_FIELDS):
+                self.report.error(
+                    "agent.soul-extra-field",
+                    f"Agent knowledge dataset field {field!r} is not allowed by Dify 1.16.",
+                    f"{item_path}.{field}",
+                )
+            dataset_id = dataset.get("id")
+            if (
+                not isinstance(dataset_id, str)
+                or not dataset_id.strip()
+                or len(dataset_id) > 255
+            ):
+                self.report.error(
+                    "agent.soul-field-type",
+                    "Agent knowledge dataset id must contain 1-255 non-blank characters.",
+                    f"{item_path}.id",
+                )
+            else:
+                dataset_ids.append(dataset_id.strip())
+            name = dataset.get("name")
+            if name is not None and (not isinstance(name, str) or len(name) > 255):
+                self.report.error(
+                    "agent.soul-field-type",
+                    "Agent knowledge dataset name must be a string of at most 255 characters or null.",
+                    f"{item_path}.name",
+                )
+            description = dataset.get("description")
+            if description is not None and not isinstance(description, str):
+                self.report.error(
+                    "agent.soul-field-type",
+                    "Agent knowledge dataset description must be a string or null.",
+                    f"{item_path}.description",
+                )
+        if len(dataset_ids) != len(set(dataset_ids)):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge dataset ids must be unique within a set.",
+                location,
+            )
+
+    def _validate_agent_knowledge_query(self, value: Any, location: str) -> None:
+        if not isinstance(value, dict):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge set query must be a mapping.",
+                location,
+            )
+            return
+        for field in _unexpected_fields(value, AGENT_KNOWLEDGE_QUERY_FIELDS):
+            self.report.error(
+                "agent.soul-extra-field",
+                f"Agent knowledge query field {field!r} is not allowed by Dify 1.16.",
+                f"{location}.{field}",
+            )
+        mode = value.get("mode")
+        if not isinstance(mode, str) or mode not in {"user_query", "generated_query"}:
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge query.mode must be user_query or generated_query.",
+                f"{location}.mode",
+            )
+        query_value = value.get("value")
+        if query_value is not None and not isinstance(query_value, str):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge query.value must be a string or null.",
+                f"{location}.value",
+            )
+
+    def _validate_agent_knowledge_retrieval(self, value: Any, location: str) -> None:
+        if not isinstance(value, dict):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge set retrieval must be a mapping.",
+                location,
+            )
+            return
+        for field in _unexpected_fields(value, AGENT_KNOWLEDGE_RETRIEVAL_FIELDS):
+            self.report.error(
+                "agent.soul-extra-field",
+                f"Agent knowledge retrieval field {field!r} is not allowed by Dify 1.16.",
+                f"{location}.{field}",
+            )
+        mode = value.get("mode")
+        if not isinstance(mode, str) or mode not in {"single", "multiple"}:
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge retrieval.mode must be single or multiple.",
+                f"{location}.mode",
+            )
+        top_k = value.get("top_k")
+        if top_k is not None and (
+            not isinstance(top_k, int)
+            or isinstance(top_k, bool)
+            or top_k < 1
+        ):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge retrieval.top_k must be an integer greater than zero or null.",
+                f"{location}.top_k",
+            )
+        score_threshold = value.get("score_threshold")
+        if score_threshold is not None and (
+            not isinstance(score_threshold, (int, float))
+            or isinstance(score_threshold, bool)
+            or not 0 <= score_threshold <= 1
+        ):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge retrieval.score_threshold must be between 0 and 1 or null.",
+                f"{location}.score_threshold",
+            )
+        if "reranking_mode" in value and not isinstance(value["reranking_mode"], str):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge retrieval.reranking_mode must be a string.",
+                f"{location}.reranking_mode",
+            )
+        if "reranking_enable" in value and not isinstance(value["reranking_enable"], bool):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge retrieval.reranking_enable must be a boolean.",
+                f"{location}.reranking_enable",
+            )
+        self._validate_agent_knowledge_named_model(
+            value.get("reranking_model"),
+            f"{location}.reranking_model",
+            allowed_fields=AGENT_KNOWLEDGE_RERANKING_MODEL_FIELDS,
+            required_fields=("provider", "model"),
+        )
+        self._validate_agent_knowledge_named_model(
+            value.get("model"),
+            f"{location}.model",
+            allowed_fields=AGENT_KNOWLEDGE_MODEL_FIELDS,
+            required_fields=("provider", "name", "mode"),
+        )
+        weights = value.get("weights")
+        if weights is not None and not isinstance(weights, dict):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge retrieval.weights must be a mapping or null.",
+                f"{location}.weights",
+            )
+
+    def _validate_agent_knowledge_named_model(
+        self,
+        value: Any,
+        location: str,
+        *,
+        allowed_fields: set[str],
+        required_fields: tuple[str, ...],
+    ) -> None:
+        if value is None:
+            return
+        if not isinstance(value, dict):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge model config must be a mapping or null.",
+                location,
+            )
+            return
+        for field in _unexpected_fields(value, allowed_fields):
+            self.report.error(
+                "agent.soul-extra-field",
+                f"Agent knowledge model field {field!r} is not allowed by Dify 1.16.",
+                f"{location}.{field}",
+            )
+        for field in required_fields:
+            field_value = value.get(field)
+            limit = 64 if field == "mode" else 255
+            if (
+                not isinstance(field_value, str)
+                or not field_value
+                or len(field_value) > limit
+            ):
+                self.report.error(
+                    "agent.soul-field-type",
+                    f"Agent knowledge model {field} must contain 1-{limit} characters.",
+                    f"{location}.{field}",
+                )
+        if "completion_params" in value and not isinstance(value["completion_params"], dict):
+            self.report.error(
+                "agent.soul-field-type",
+                "Agent knowledge model completion_params must be a mapping.",
+                f"{location}.completion_params",
+            )
+
+    def _validate_agent_config_assets(
+        self,
+        values: list[Any],
+        location: str,
+        *,
+        allowed_fields: set[str],
+        kind: str,
+    ) -> None:
+        for index, item in enumerate(values):
+            item_path = f"{location}[{index}]"
+            if not isinstance(item, dict):
+                self.report.error(
+                    "agent.soul-field-type",
+                    f"Agent config {kind} must be a mapping.",
+                    item_path,
+                )
+                continue
+            for field in _unexpected_fields(item, allowed_fields):
+                self.report.error(
+                    "agent.soul-extra-field",
+                    f"Agent config {kind} field {field!r} is not allowed by Dify 1.16.",
+                    f"{item_path}.{field}",
+                )
+            name = item.get("name")
+            valid_name = (
+                isinstance(name, str)
+                and bool(name.strip())
+                and len(name) <= 255
+                and name not in {".", ".."}
+                and "/" not in name
+                and "\\" not in name
+                and "\x00" not in name
+                and not any(ord(char) < 0x20 for char in name)
+            )
+            if kind == "skill" and valid_name:
+                valid_name = CONFIG_SKILL_NAME_RE.fullmatch(name.strip()) is not None
+            if not valid_name:
+                self.report.error(
+                    "agent.soul-field-type",
+                    f"Agent config {kind} name is invalid.",
+                    f"{item_path}.name",
+                )
+            file_kind = item.get("file_kind", "tool_file" if kind == "skill" else None)
+            allowed_kinds = {"tool_file"} if kind == "skill" else {"upload_file", "tool_file"}
+            if not isinstance(file_kind, str) or file_kind not in allowed_kinds:
+                self.report.error(
+                    "agent.soul-field-type",
+                    f"Agent config {kind} file_kind must be one of {sorted(allowed_kinds)}.",
+                    f"{item_path}.file_kind",
+                )
+            file_id = item.get("file_id", "")
+            if not isinstance(file_id, str) or len(file_id) > 255:
+                self.report.error(
+                    "agent.soul-field-type",
+                    f"Agent config {kind} file_id must be a string of at most 255 characters.",
+                    f"{item_path}.file_id",
+                )
+            is_missing = item.get("is_missing", False)
+            if not isinstance(is_missing, bool):
+                self.report.error(
+                    "agent.soul-field-type",
+                    f"Agent config {kind} is_missing must be a boolean.",
+                    f"{item_path}.is_missing",
+                )
+            elif isinstance(file_id, str):
+                if is_missing and file_id:
+                    self.report.error(
+                        "agent.soul-field-type",
+                        f"Missing Agent config {kind} must not retain file_id.",
+                        f"{item_path}.file_id",
+                    )
+                elif not is_missing and not file_id.strip():
+                    self.report.error(
+                        "agent.soul-field-type",
+                        f"Agent config {kind} file_id is required unless is_missing is true.",
+                        f"{item_path}.file_id",
+                    )
+            size = item.get("size")
+            if size is not None and (not isinstance(size, int) or isinstance(size, bool)):
+                self.report.error(
+                    "agent.soul-field-type",
+                    f"Agent config {kind} size must be an integer or null.",
+                    f"{item_path}.size",
+                )
+            for field in ("description", "hash", "mime_type"):
+                if field not in allowed_fields:
+                    continue
+                value = item.get(field)
+                if value is not None and not isinstance(value, str):
+                    self.report.error(
+                        "agent.soul-field-type",
+                        f"Agent config {kind} {field} must be a string or null.",
+                        f"{item_path}.{field}",
+                    )
 
     def _validate_agent_app(self) -> None:
         raw_agent = self.document.get("agent")
@@ -683,8 +1203,18 @@ class Validator:
             outputs = {"result", "first_record", "last_record"}
         elif node_type == "variable-aggregator":
             outputs = {"output"}
-        elif node_type in {"iteration", "loop"}:
+        elif node_type == "iteration":
+            # Dify exposes the current item and index to nodes inside the
+            # iteration in addition to the aggregate output visible outside.
+            outputs = {"output", "item", "index"}
+        elif node_type == "loop":
             outputs = {"output"}
+            for variable in _list(data.get("loop_variables")):
+                if not isinstance(variable, dict):
+                    continue
+                label = variable.get("label")
+                if isinstance(label, str) and label:
+                    outputs.add(label)
         elif node_type in TRIGGER_TYPES:
             outputs = None
         elif node_type in {"assigner", "iteration-start", "loop-start"}:
@@ -1122,26 +1652,210 @@ class Validator:
 
         if not child:
             check = item.get("check")
-            if check is not None and not isinstance(check, dict):
+            if check is not None:
+                self._validate_declared_output_check(
+                    check,
+                    f"{location}.check",
+                    output_type=output_type,
+                )
+            failure_strategy = item.get("failure_strategy")
+            if failure_strategy is not None:
+                self._validate_declared_output_failure_strategy(
+                    failure_strategy,
+                    f"{location}.failure_strategy",
+                    output_type=output_type,
+                    array_item=array_item,
+                )
+        return valid_name
+
+    def _validate_declared_output_check(
+        self,
+        check: Any,
+        location: str,
+        *,
+        output_type: str | None,
+    ) -> None:
+        if not isinstance(check, dict):
+            self.report.error(
+                "node.agent-v2.declared-output-shape",
+                "Declared output check must be a mapping or null.",
+                location,
+            )
+            return
+        for field in _unexpected_fields(check, DECLARED_OUTPUT_CHECK_FIELDS):
+            self.report.error(
+                "node.agent-v2.declared-output-extra-field",
+                f"Declared output check field {field!r} is not allowed by Dify 1.16.",
+                f"{location}.{field}",
+            )
+        enabled = check.get("enabled", False)
+        if not isinstance(enabled, bool):
+            self.report.error(
+                "node.agent-v2.declared-output-shape",
+                "Declared output check.enabled must be a boolean.",
+                f"{location}.enabled",
+            )
+            enabled = False
+        prompt = check.get("prompt")
+        if prompt is not None and not isinstance(prompt, str):
+            self.report.error(
+                "node.agent-v2.declared-output-shape",
+                "Declared output check.prompt must be a string or null.",
+                f"{location}.prompt",
+            )
+        benchmark = check.get("benchmark_file_ref")
+        if benchmark is not None and not isinstance(benchmark, dict):
+            self.report.error(
+                "node.agent-v2.declared-output-shape",
+                "Declared output check.benchmark_file_ref must be a mapping or null.",
+                f"{location}.benchmark_file_ref",
+            )
+        model_ref = check.get("model_ref")
+        if model_ref is not None:
+            if not isinstance(model_ref, dict):
                 self.report.error(
                     "node.agent-v2.declared-output-shape",
-                    "Declared output check must be a mapping or null.",
-                    f"{location}.check",
+                    "Declared output check.model_ref must be a mapping or null.",
+                    f"{location}.model_ref",
                 )
-            if isinstance(check, dict) and check.get("enabled") is True and output_type != "file":
+            else:
+                self._validate_agent_soul_model(model_ref, f"{location}.model_ref")
+        if enabled:
+            if output_type != "file":
                 self.report.error(
                     "node.agent-v2.declared-output-shape",
                     "Enabled output checks are allowed only for file outputs.",
-                    f"{location}.check",
+                    location,
                 )
-            failure_strategy = item.get("failure_strategy")
-            if failure_strategy is not None and not isinstance(failure_strategy, dict):
+            if not isinstance(prompt, str) or not prompt.strip():
                 self.report.error(
                     "node.agent-v2.declared-output-shape",
-                    "Declared output failure_strategy must be a mapping or null.",
-                    f"{location}.failure_strategy",
+                    "Enabled output checks require a non-blank prompt.",
+                    f"{location}.prompt",
                 )
-        return valid_name
+            if not isinstance(benchmark, dict):
+                self.report.error(
+                    "node.agent-v2.declared-output-shape",
+                    "Enabled output checks require benchmark_file_ref.",
+                    f"{location}.benchmark_file_ref",
+                )
+
+    def _validate_declared_output_failure_strategy(
+        self,
+        strategy: Any,
+        location: str,
+        *,
+        output_type: str | None,
+        array_item: Any,
+    ) -> None:
+        if not isinstance(strategy, dict):
+            self.report.error(
+                "node.agent-v2.declared-output-shape",
+                "Declared output failure_strategy must be a mapping or null.",
+                location,
+            )
+            return
+        for field in _unexpected_fields(strategy, DECLARED_OUTPUT_FAILURE_FIELDS):
+            self.report.error(
+                "node.agent-v2.declared-output-extra-field",
+                f"Declared output failure_strategy field {field!r} is not allowed by Dify 1.16.",
+                f"{location}.{field}",
+            )
+        retry = strategy.get("retry", {})
+        if not isinstance(retry, dict):
+            self.report.error(
+                "node.agent-v2.declared-output-shape",
+                "Declared output failure_strategy.retry must be a mapping.",
+                f"{location}.retry",
+            )
+        else:
+            for field in _unexpected_fields(retry, DECLARED_OUTPUT_RETRY_FIELDS):
+                self.report.error(
+                    "node.agent-v2.declared-output-extra-field",
+                    f"Declared output retry field {field!r} is not allowed by Dify 1.16.",
+                    f"{location}.retry.{field}",
+                )
+            enabled = retry.get("enabled", False)
+            if not isinstance(enabled, bool):
+                self.report.error(
+                    "node.agent-v2.declared-output-shape",
+                    "Declared output retry.enabled must be a boolean.",
+                    f"{location}.retry.enabled",
+                )
+            for field, maximum in (("max_retries", 10), ("retry_interval_ms", 60_000)):
+                value = retry.get(field, 0)
+                if (
+                    not isinstance(value, int)
+                    or isinstance(value, bool)
+                    or not 0 <= value <= maximum
+                ):
+                    self.report.error(
+                        "node.agent-v2.declared-output-shape",
+                        f"Declared output retry.{field} must be an integer between 0 and {maximum}.",
+                        f"{location}.retry.{field}",
+                    )
+
+        on_failure = strategy.get("on_failure", "stop")
+        if not isinstance(on_failure, str) or on_failure not in DECLARED_OUTPUT_FAILURE_MODES:
+            self.report.error(
+                "node.agent-v2.declared-output-shape",
+                "Declared output on_failure must be stop, default_value, or fail_branch.",
+                f"{location}.on_failure",
+            )
+            return
+        default_value = strategy.get("default_value")
+        if on_failure == "default_value":
+            if default_value is None:
+                self.report.error(
+                    "node.agent-v2.declared-output-shape",
+                    "on_failure: default_value requires a non-null default_value.",
+                    f"{location}.default_value",
+                )
+            elif not self._declared_default_matches_type(default_value, output_type, array_item):
+                self.report.error(
+                    "node.agent-v2.declared-output-shape",
+                    f"Declared output default_value does not match output type {output_type!r}.",
+                    f"{location}.default_value",
+                )
+
+    @staticmethod
+    def _declared_default_matches_type(value: Any, output_type: str | None, array_item: Any) -> bool:
+        if output_type == "string":
+            return isinstance(value, str)
+        if output_type == "number":
+            return isinstance(value, (int, float)) and not isinstance(value, bool)
+        if output_type == "boolean":
+            return isinstance(value, bool)
+        if output_type == "object":
+            return isinstance(value, dict)
+        if output_type == "array":
+            if not isinstance(value, list):
+                return False
+            if isinstance(array_item, dict) and array_item.get("type") == "file":
+                return all(Validator._is_valid_file_default(item) for item in value)
+            return True
+        if output_type == "file":
+            return Validator._is_valid_file_default(value)
+        return False
+
+    @staticmethod
+    def _is_valid_file_default(value: Any) -> bool:
+        if not isinstance(value, dict):
+            return False
+        transfer_method = value.get("transfer_method")
+        if transfer_method == "remote_url":
+            return (
+                set(value) == {"transfer_method", "url"}
+                and isinstance(value.get("url"), str)
+                and bool(value["url"])
+            )
+        return (
+            isinstance(transfer_method, str)
+            and bool(transfer_method)
+            and set(value) == {"transfer_method", "reference"}
+            and isinstance(value.get("reference"), str)
+            and bool(value["reference"])
+        )
 
     def _validate_declared_array_item(self, item: Any, location: str) -> None:
         if not isinstance(item, dict):
@@ -1451,7 +2165,13 @@ class Validator:
                             f"workflow.graph.nodes[{node_id}].data.{field}",
                         )
                 flag = "isInIteration" if field == "iteration_id" else "isInLoop"
-                if data.get(flag) is True and (not isinstance(ref, str) or not ref):
+                expected_start_type = CONTAINER_START_TYPES[container_type]
+                is_container_start = self.node_type_by_id.get(node_id) == expected_start_type
+                if (
+                    data.get(flag) is True
+                    and not is_container_start
+                    and (not isinstance(ref, str) or not ref)
+                ):
                     self.report.error(
                         "container.reference",
                         f"{flag}: true requires a valid {field}.",
@@ -1650,7 +2370,7 @@ class Validator:
 
     def _validate_references(self) -> None:
         seen: set[tuple[str, tuple[str, ...]]] = set()
-        self._walk_references(self.workflow, "workflow", seen, allow_selector=True)
+        self._walk_references(self.workflow, "workflow", seen, allow_selector=False)
 
     def _walk_references(
         self,
@@ -1673,22 +2393,30 @@ class Validator:
         if isinstance(value, dict):
             for key, child in value.items():
                 child_path = f"{path}.{key}"
+                key_text = str(key)
                 is_selector_key = (
                     key == "selector"
-                    or str(key).endswith("_selector")
+                    or key_text.endswith("_selector")
                     or key in {"query", "variable"}
                 )
-                if (
-                    is_selector_key
-                    and isinstance(child, list)
-                    and len(child) >= 2
-                    and all(isinstance(part, str) for part in child)
-                ):
-                    selector = tuple(child)
-                    marker = (child_path, selector)
-                    if marker not in seen:
-                        seen.add(marker)
-                        self._validate_selector(selector, child_path)
+                is_variable_value = key == "value" and (
+                    value.get("input_type") == "variable"
+                    or value.get("value_type") == "variable"
+                    or value.get("type") == "variable"
+                )
+                if key in SELECTOR_COLLECTION_KEYS and isinstance(child, list):
+                    for index, candidate in enumerate(child):
+                        if (
+                            isinstance(candidate, list)
+                            and len(candidate) >= 2
+                            and all(isinstance(part, str) for part in candidate)
+                        ):
+                            selector = tuple(candidate)
+                            selector_path = f"{child_path}[{index}]"
+                            marker = (selector_path, selector)
+                            if marker not in seen:
+                                seen.add(marker)
+                                self._validate_selector(selector, selector_path)
                 is_plain_value_list = (
                     key == "value"
                     and isinstance(child, list)
@@ -1699,13 +2427,28 @@ class Validator:
                         or "comparison_operator" in value
                     )
                 )
-                child_allows_selector = allow_selector and not (
-                    (
-                        key in NON_SELECTOR_LIST_KEYS
-                        or (isinstance(key, str) and key.endswith("_ids"))
+                child_allows_selector = (
+                    (allow_selector or is_selector_key or is_variable_value)
+                    and not (
+                        (
+                            key in NON_SELECTOR_LIST_KEYS
+                            or key_text.endswith("_ids")
+                        )
+                        and isinstance(child, list)
                     )
+                    and not is_plain_value_list
+                )
+                if (
+                    child_allows_selector
                     and isinstance(child, list)
-                ) and not is_plain_value_list
+                    and len(child) >= 2
+                    and all(isinstance(part, str) for part in child)
+                ):
+                    selector = tuple(child)
+                    marker = (child_path, selector)
+                    if marker not in seen:
+                        seen.add(marker)
+                        self._validate_selector(selector, child_path)
                 self._walk_references(
                     child,
                     child_path,

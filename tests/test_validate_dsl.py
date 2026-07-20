@@ -351,6 +351,20 @@ class ValidatorFixtureTests(unittest.TestCase):
 
     def test_system_selector_forms_and_plain_string_arrays_are_not_references(self) -> None:
         document = load_fixture("valid", "advanced-chat-0.7.yml")
+        document["workflow"]["conversation_variables"] = [
+            {
+                "name": "choices",
+                "value_type": "array[string]",
+                "value": ["approve", "reject"],
+            }
+        ]
+        document["workflow"]["features"] = {
+            "file_upload": {
+                "image": {
+                    "transfer_methods": ["remote_url", "local_file"],
+                }
+            }
+        }
         start_data = document["workflow"]["graph"]["nodes"][0]["data"]
         start_data["variables"] = [
             {
@@ -386,6 +400,371 @@ class ValidatorFixtureTests(unittest.TestCase):
         )
         report = validate_document(human)
         self.assertEqual([], report.diagnostics, report.format_text())
+
+    def test_dify_container_start_helpers_and_internal_outputs_are_valid(self) -> None:
+        def edge(edge_id: str, source: str, target: str, source_type: str, target_type: str) -> dict[str, object]:
+            return {
+                "id": edge_id,
+                "source": source,
+                "target": target,
+                "sourceHandle": "source",
+                "targetHandle": "target",
+                "data": {"sourceType": source_type, "targetType": target_type},
+            }
+
+        iteration = base_workflow_document()
+        iteration["workflow"]["graph"] = {
+            "nodes": [
+                {
+                    "id": "start",
+                    "type": "custom",
+                    "data": {
+                        "type": "start",
+                        "variables": [
+                            {
+                                "label": "Items",
+                                "variable": "items",
+                                "type": "paragraph",
+                                "required": True,
+                            }
+                        ],
+                    },
+                },
+                {
+                    "id": "iteration",
+                    "type": "custom",
+                    "data": {
+                        "type": "iteration",
+                        "start_node_id": "iteration_start",
+                        "iterator_selector": ["start", "items"],
+                        "output_selector": ["iteration_child", "result"],
+                    },
+                },
+                {
+                    "id": "iteration_start",
+                    "type": "custom-iteration-start",
+                    "parentId": "iteration",
+                    "data": {"type": "iteration-start", "isInIteration": True},
+                },
+                {
+                    "id": "iteration_child",
+                    "type": "custom",
+                    "parentId": "iteration",
+                    "data": {
+                        "type": "code",
+                        "isInIteration": True,
+                        "iteration_id": "iteration",
+                        "code_language": "python3",
+                        "code": "def main(item, index):\n    return {'result': item}\n",
+                        "variables": [
+                            {"variable": "item", "value_selector": ["iteration", "item"]},
+                            {"variable": "index", "value_selector": ["iteration", "index"]},
+                        ],
+                        "outputs": {"result": {"type": "string"}},
+                    },
+                },
+                {
+                    "id": "end",
+                    "type": "custom",
+                    "data": {
+                        "type": "end",
+                        "outputs": [{"variable": "result", "value_selector": ["iteration", "output"]}],
+                    },
+                },
+            ],
+            "edges": [
+                edge("start-iteration", "start", "iteration", "start", "iteration"),
+                edge("iteration-end", "iteration", "end", "iteration", "end"),
+                edge(
+                    "iteration-start-child",
+                    "iteration_start",
+                    "iteration_child",
+                    "iteration-start",
+                    "code",
+                ),
+            ],
+        }
+
+        loop = base_workflow_document()
+        loop["workflow"]["graph"] = {
+            "nodes": [
+                {"id": "start", "type": "custom", "data": {"type": "start", "variables": []}},
+                {
+                    "id": "loop",
+                    "type": "custom",
+                    "data": {
+                        "type": "loop",
+                        "start_node_id": "loop_start",
+                        "loop_count": 10,
+                        "loop_variables": [
+                            {
+                                "id": "counter",
+                                "label": "num",
+                                "value": "1",
+                                "value_type": "constant",
+                                "var_type": "number",
+                            }
+                        ],
+                    },
+                },
+                {
+                    "id": "loop_start",
+                    "type": "custom-loop-start",
+                    "parentId": "loop",
+                    "data": {"type": "loop-start", "isInLoop": True},
+                },
+                {
+                    "id": "loop_child",
+                    "type": "custom",
+                    "parentId": "loop",
+                    "data": {
+                        "type": "assigner",
+                        "version": "2",
+                        "isInLoop": True,
+                        "loop_id": "loop",
+                        "items": [
+                            {
+                                "variable_selector": ["loop", "num"],
+                                "input_type": "constant",
+                                "operation": "+=",
+                                "value": 1,
+                            }
+                        ],
+                    },
+                },
+                {
+                    "id": "end",
+                    "type": "custom",
+                    "data": {
+                        "type": "end",
+                        "outputs": [{"variable": "result", "value_selector": ["loop", "output"]}],
+                    },
+                },
+            ],
+            "edges": [
+                edge("start-loop", "start", "loop", "start", "loop"),
+                edge("loop-end", "loop", "end", "loop", "end"),
+                edge("loop-start-child", "loop_start", "loop_child", "loop-start", "assigner"),
+            ],
+        }
+
+        for label, document in (("iteration", iteration), ("loop", loop)):
+            with self.subTest(container=label):
+                report = validate_document(document)
+                self.assertEqual([], report.diagnostics, report.format_text())
+
+    def test_nested_selector_collections_still_report_unknown_references(self) -> None:
+        document = base_workflow_document()
+        document["workflow"]["graph"]["nodes"].insert(
+            1,
+            {
+                "id": "aggregate",
+                "type": "custom",
+                "data": {
+                    "type": "variable-aggregator",
+                    "title": "Aggregate",
+                    "variables": [["missing-node", "output"]],
+                },
+            },
+        )
+        document["workflow"]["graph"]["edges"] = [
+            {
+                "id": "start-aggregate",
+                "source": "start",
+                "target": "aggregate",
+                "sourceHandle": "source",
+                "targetHandle": "target",
+                "data": {"sourceType": "start", "targetType": "variable-aggregator"},
+            },
+            {
+                "id": "aggregate-end",
+                "source": "aggregate",
+                "target": "end",
+                "sourceHandle": "source",
+                "targetHandle": "target",
+                "data": {"sourceType": "variable-aggregator", "targetType": "end"},
+            },
+        ]
+
+        report = validate_document(document)
+        self.assertIn("reference.unknown-root", {diagnostic.code for diagnostic in report.errors})
+
+    def test_agent_soul_nested_import_constraints_are_rejected(self) -> None:
+        document = load_fixture("valid", "agent-app-0.7.yml")
+        soul = document["agent_packages"]["agent_1"]["soul"]
+        soul["knowledge"] = {"unknown": True}
+        soul["model"] = {}
+        soul["config_skills"] = [
+            {
+                "name": "Bad Skill Name",
+                "file_kind": "tool_file",
+                "file_id": "",
+                "is_missing": False,
+                "unknown": True,
+            }
+        ]
+        soul["config_files"] = [
+            {
+                "name": "file.txt",
+                "file_kind": "invalid",
+                "file_id": "",
+                "is_missing": False,
+            }
+        ]
+
+        report = validate_document(document)
+        codes = {diagnostic.code for diagnostic in report.errors}
+        locations = {diagnostic.location for diagnostic in report.errors}
+        self.assertIn("agent.soul-extra-field", codes)
+        self.assertIn("agent.soul-field-type", codes)
+        self.assertIn("agent_packages.agent_1.soul.knowledge.unknown", locations)
+        self.assertIn("agent_packages.agent_1.soul.model.plugin_id", locations)
+        self.assertIn("agent_packages.agent_1.soul.config_skills[0].unknown", locations)
+        self.assertIn("agent_packages.agent_1.soul.config_files[0].file_kind", locations)
+
+    def test_valid_agent_soul_nested_config_has_no_diagnostics(self) -> None:
+        document = load_fixture("valid", "agent-app-0.7.yml")
+        document["dependencies"] = [
+            {
+                "type": "marketplace",
+                "value": {
+                    "marketplace_plugin_unique_identifier": "langgenius/openai:1.0.0",
+                },
+            }
+        ]
+        soul = document["agent_packages"]["agent_1"]["soul"]
+        soul.update(
+            {
+                "knowledge": {
+                    "sets": [
+                        {
+                            "id": "primary",
+                            "name": "Primary",
+                            "datasets": [{"id": "dataset-1"}],
+                            "query": {"mode": "user_query"},
+                            "retrieval": {"mode": "multiple", "top_k": 5},
+                        }
+                    ]
+                },
+                "model": {
+                    "plugin_id": "langgenius/openai",
+                    "model_provider": "langgenius/openai/openai",
+                    "model": "gpt-4o-mini",
+                    "credential_ref": None,
+                    "model_settings": {},
+                },
+                "config_skills": [
+                    {
+                        "name": "review-skill",
+                        "file_kind": "tool_file",
+                        "file_id": "",
+                        "is_missing": True,
+                    }
+                ],
+                "config_files": [
+                    {
+                        "name": "guide.txt",
+                        "file_kind": "upload_file",
+                        "file_id": "",
+                        "is_missing": True,
+                    }
+                ],
+            }
+        )
+
+        report = validate_document(document)
+        self.assertEqual([], report.diagnostics, report.format_text())
+
+    def test_declared_output_check_and_failure_strategy_constraints_are_rejected(self) -> None:
+        cases = {
+            "check-extra": {
+                "name": "result",
+                "type": "string",
+                "check": {"enabled": False, "unknown": True},
+            },
+            "enabled-check-missing-fields": {
+                "name": "result",
+                "type": "file",
+                "check": {"enabled": True},
+            },
+            "missing-default": {
+                "name": "result",
+                "type": "string",
+                "failure_strategy": {"on_failure": "default_value"},
+            },
+            "wrong-default-type": {
+                "name": "result",
+                "type": "number",
+                "failure_strategy": {
+                    "on_failure": "default_value",
+                    "default_value": "not-a-number",
+                },
+            },
+            "invalid-retry": {
+                "name": "result",
+                "type": "string",
+                "failure_strategy": {
+                    "retry": {
+                        "enabled": True,
+                        "max_retries": 11,
+                        "retry_interval_ms": -1,
+                        "unknown": True,
+                    }
+                },
+            },
+        }
+        for label, declared_output in cases.items():
+            with self.subTest(case=label):
+                document = load_fixture("valid", "agent-v2-workflow-0.7.yml")
+                job = document["workflow"]["graph"]["nodes"][1]["data"]["agent_job"]
+                job["declared_outputs"] = [declared_output]
+                document["workflow"]["graph"]["nodes"][2]["data"]["outputs"][0]["value_selector"] = [
+                    "worker",
+                    "result",
+                ]
+                report = validate_document(document)
+                codes = {diagnostic.code for diagnostic in report.errors}
+                self.assertTrue(
+                    {
+                        "node.agent-v2.declared-output-extra-field",
+                        "node.agent-v2.declared-output-shape",
+                    }
+                    & codes,
+                    report.format_text(),
+                )
+
+    def test_valid_declared_output_check_and_failure_strategy_have_no_errors(self) -> None:
+        document = load_fixture("valid", "agent-v2-workflow-0.7.yml")
+        job = document["workflow"]["graph"]["nodes"][1]["data"]["agent_job"]
+        job["declared_outputs"] = [
+            {
+                "name": "report",
+                "type": "file",
+                "check": {
+                    "enabled": True,
+                    "prompt": "Compare the generated report with the benchmark.",
+                    "benchmark_file_ref": {
+                        "reference": "dify-file-ref:example",
+                        "transfer_method": "tool_file",
+                    },
+                },
+                "failure_strategy": {
+                    "retry": {
+                        "enabled": True,
+                        "max_retries": 2,
+                        "retry_interval_ms": 1000,
+                    },
+                    "on_failure": "fail_branch",
+                },
+            }
+        ]
+        document["workflow"]["graph"]["nodes"][2]["data"]["outputs"][0]["value_selector"] = [
+            "worker",
+            "report",
+        ]
+
+        report = validate_document(document)
+        self.assertEqual([], report.errors, report.format_text())
 
     def test_agent_package_nested_constraints_have_stable_codes(self) -> None:
         document = load_fixture("valid", "agent-app-0.7.yml")
