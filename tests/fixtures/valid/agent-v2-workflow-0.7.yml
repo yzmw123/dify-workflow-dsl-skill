@@ -1,0 +1,61 @@
+version: "0.7.0"
+kind: app
+app: {name: Agent Workflow, mode: workflow}
+agent_packages:
+  agent_1:
+    schema_version: 1
+    metadata: {name: Inline Agent, description: "", role: worker}
+    soul: {schema_version: 1}
+    omitted_assets: []
+dependencies: []
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  graph:
+    nodes:
+      - id: start
+        type: custom
+        data:
+          type: start
+          title: Start
+          variables:
+            - {label: Task, variable: task, type: paragraph, required: true}
+      - id: worker
+        type: custom
+        data:
+          type: agent
+          title: Worker
+          version: "2"
+          agent_node_kind: dify_agent
+          agent_binding: {binding_type: inline_agent, package_ref: agent_1}
+          agent_job:
+            schema_version: 1
+            workflow_prompt: "Complete the requested task."
+            previous_node_output_refs:
+              - selector: [start, task]
+            declared_outputs: []
+            human_contacts: []
+            metadata: {}
+      - id: end
+        type: custom
+        data:
+          type: end
+          title: End
+          outputs:
+            - variable: result
+              value_selector: [worker, text]
+    edges:
+      - id: start-source-worker-target
+        source: start
+        target: worker
+        sourceHandle: source
+        targetHandle: target
+        type: custom
+        data: {sourceType: start, targetType: agent}
+      - id: worker-source-end-target
+        source: worker
+        target: end
+        sourceHandle: source
+        targetHandle: target
+        type: custom
+        data: {sourceType: agent, targetType: end}

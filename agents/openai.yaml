@@ -1,5 +1,5 @@
 interface:
   display_name: "Dify Workflow DSL"
-  short_description: "Author import-ready Dify Workflow/Chatflow YAML"
+  short_description: "Author Dify DSL 0.6/0.7 Workflow, Chatflow, and Agent YAML"
   brand_color: "#1F8A70"
-  default_prompt: "Use $dify-workflow-dsl to create an import-ready Dify workflow YAML for my automation. Default to workflow unless Chatflow is needed."
+  default_prompt: "Use $dify-workflow-dsl to create an import-ready Dify 0.7.0 app DSL for my automation. Default to workflow unless Chatflow or Agent App behavior is needed."

@@ -9,10 +9,10 @@ test imports, repeat. Then I noticed Dify supports YAML import/export for
 workflows. That led to a simple idea: why not let AI learn how Dify writes
 workflows, and then ask AI to write the DSL for us?
 
-This skill is the result of that idea. It targets Dify's official current app
-DSL version, `0.6.0`, by studying Dify's open-source code, exported Dify DSL
-files, and public Dify workflow DSL examples from GitHub, then turning those
-patterns into a reusable skill.
+This skill is the result of that idea. It now targets Dify 1.16's official App
+DSL `0.7.0` for new files while retaining `0.6.0` compatibility for Dify 1.15.x.
+The rules come from Dify's open-source code, exported DSL files, and public Dify
+workflow examples.
 
 During the research process, I systematically studied Dify's official source
 code, my own exported DSL files, and multiple public DSL example repositories.
@@ -21,11 +21,10 @@ Chatflow, Workflow, Agent, database read/write, plugin tool, knowledge base, fil
 processing, triggered integration, branching, and loop scenarios.
 
 One important detail: most public DSL examples were exported from older Dify
-versions. A small newer sample now includes `0.6.0`, but the corpus is still
-mostly legacy. For that reason, this project uses Dify's official source code as
-the authority for new `0.6.0` DSL generation, while using the public DSL corpus
-as practical reference material for compatibility, graph structure, trigger
-workflows, and tool-node patterns.
+versions. A small newer sample includes `0.6.0`, but the corpus is still mostly
+legacy and predates 0.7.0. For that reason, this project uses tagged Dify source
+as version authority while using the public corpus for compatibility, graph
+structure, trigger workflows, and tool-node patterns.
 
 中文说明见 [README_CN.md](./README_CN.md).
 
@@ -55,9 +54,8 @@ My other open-source projects will also be announced on this account first.
 
 <img src="./assets/wechat-official-account.jpg" alt="WeChat Official Account QR code for Silicon Scout S01" width="220">
 
-**Current release: V2.0.** The earlier version was effectively V1.0: it
-established the import-ready Dify DSL baseline. V2.0 adds deeper real-world YAML
-learning, business use-case routing, and Agent Skills specification alignment.
+**Current release: V3.0.** V3.0 adds DSL 0.7.0, portable Agent App and Agent v2
+support, a refactored machine-readable validator, regression fixtures, and CI.
 
 ## Why This Exists
 
@@ -73,13 +71,31 @@ This skill collects Dify DSL structure, node schemas, real exported examples,
 database read/write patterns, plugin marketplace guidance, and a local validator
 into one reusable package.
 
-For new workflows, the skill defaults to `version: "0.6.0"`, the current version
-declared by Dify source. Older public DSLs are still valuable, but they are not
-treated as the latest schema authority.
+For new Dify 1.16.x workflows, the skill defaults to `version: "0.7.0"`. It can
+also generate, preserve, and validate `"0.6.0"` for Dify 1.15.x. Older public
+DSLs are valuable design evidence but are not the latest schema authority.
 
 For new app creation, the skill defaults to Dify `workflow` mode. It switches or
 offers `advanced-chat` when the user needs Chatflow behavior such as multi-turn
 memory, `sys.query`, chat file upload, or `answer` nodes.
+
+## V3.0 Update Notes
+
+- Verified the version transition directly against Dify tags: 1.15.0 uses DSL
+  0.6.0 and 1.16.0 uses DSL 0.7.0.
+- Added `app.mode: agent`, top-level `agent`/`agent_packages`, portable Agent
+  package rules, and Agent v2 workflow-node schemas.
+- Corrected Human Input to the official form/action schema and action-based edge
+  handles.
+- Refactored the validator into a reusable Python package with stable diagnostic
+  codes, text/JSON output, target-version checks, and strict mode.
+- Added deterministic checks for graph reachability, terminal reachability,
+  cycles, branch handles, known output references, Agent package refs, plugin
+  dependency coverage, and SQL risks.
+- Added 0.6.0/0.7.0, Workflow/Chatflow/Agent/Human Input fixtures, invalid-case
+  regression tests, and GitHub Actions CI.
+- Added a scale pattern based on Dify 1.16's generator: plan, independent node
+  building, deterministic assembly/post-processing, then structural validation.
 
 ## V2.0 Update Notes
 
@@ -108,7 +124,7 @@ for a business request, not only how to fill YAML fields.
   skills examples; the install payload is now limited to the files the skill
   actually uses.
 
-V2.0 still targets official Dify app DSL `version: "0.6.0"` for new generation.
+V2.0 targeted official Dify app DSL `version: "0.6.0"` for new generation.
 Public examples are used as real-world design evidence, not as the source of
 truth for the latest schema.
 
@@ -165,10 +181,11 @@ use `--target-dir` if your OpenCode config lives elsewhere.
 
 ## What It Can Do
 
-- Generate import-ready `workflow` and `advanced-chat` Dify DSL YAML.
+- Generate import-ready `workflow`, `advanced-chat`, and DSL 0.7.0 Agent App YAML.
 - Recommend `workflow` vs `advanced-chat` and choose node patterns from business
   requirements.
-- Target official Dify app DSL `version: "0.6.0"` for new files.
+- Target `version: "0.7.0"` for Dify 1.16.x and `"0.6.0"` for Dify 1.15.x.
+- Create portable Agent v2 workflow nodes and package refs for DSL 0.7.0.
 - Create common nodes: Start, End, Answer, LLM, Code, IF/ELSE, HTTP Request,
   Template Transform, Variable Aggregator, Assigner, Document Extractor,
   Question Classifier, Parameter Extractor, Knowledge Retrieval, Agent,
@@ -244,6 +261,13 @@ Reliability levels:
 
 ## Validation
 
+The validator requires Python 3.10+ and PyYAML. For development, install the
+maintained dependency file:
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
 Run:
 
 ```bash
@@ -253,12 +277,19 @@ python3 scripts/validate_dsl.py path/to/workflow.yml
 Validate multiple DSL files:
 
 ```bash
-python3 scripts/validate_dsl.py examples/*.yml
+python3 scripts/validate_dsl.py tests/fixtures/valid/*.yml
 ```
 
-The validator checks YAML parsing, string DSL version, graph edge references,
-node type consistency, LLM/tool basics, variable references, and common SQL
-mistakes such as trailing commas in `INSERT` column lists.
+Enforce a version or produce CI-friendly JSON:
+
+```bash
+python3 scripts/validate_dsl.py --target-version 0.7.0 workflow.yml
+python3 scripts/validate_dsl.py --format json --strict workflow.yml
+```
+
+The validator checks 0.6.0/0.7.0 version compatibility, Agent package refs,
+graph endpoints/reachability/cycles, branch handles, known output references,
+Human Input schemas, dependency coverage, node basics, and SQL risks.
 
 ## Project Structure
 
@@ -270,17 +301,23 @@ mistakes such as trailing commas in `INSERT` column lists.
 ├── assets/
 │   └── wechat-official-account.jpg
 ├── install.sh
+├── requirements-dev.txt
 ├── references/
 │   ├── complete-examples.md
 │   ├── database-tools.md
 │   ├── dsl-structure.md
 │   ├── node-schemas.md
 │   ├── official-0.6-target.md
+│   ├── official-0.7-target.md
 │   ├── plugin-marketplace-tools.md
 │   ├── real-world-yml-study.md
 │   └── usecase-node-selection.md
 ├── scripts/
+│   ├── dify_dsl_validator/
 │   └── validate_dsl.py
+├── tests/
+│   ├── fixtures/
+│   └── test_validate_dsl.py
 ├── README.md
 └── README_CN.md
 ```
@@ -298,6 +335,7 @@ Keep this skill useful by updating it when Dify changes:
 - Keep `SKILL.md` short so the agent loads only the essential workflow.
 - Add deterministic checks to `scripts/validate_dsl.py` when repeated import
   errors are discovered.
+- Run `python3 -m unittest discover -s tests -v` before release.
 - Re-run skill validation after edits:
 
 ```bash

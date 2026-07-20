@@ -1,0 +1,25 @@
+version: "0.7.0"
+kind: app
+app: {name: Bad Human, mode: workflow}
+dependencies: []
+workflow:
+  graph:
+    nodes:
+      - {id: start, type: custom, data: {type: start, title: Start, variables: []}}
+      - id: review
+        type: custom
+        data:
+          type: human-input
+          title: Review
+          delivery_methods: []
+          form_content: "Review"
+          inputs: []
+          user_actions:
+            - {id: approve, title: Approve, button_style: primary}
+            - {id: approve, title: Again, button_style: default}
+          timeout: 36
+          timeout_unit: hour
+      - {id: end, type: custom, data: {type: end, title: End, outputs: []}}
+    edges:
+      - {id: start-source-review-target, source: start, target: review, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: human-input}}
+      - {id: review-approve-end-target, source: review, target: end, sourceHandle: approve, targetHandle: target, data: {sourceType: human-input, targetType: end}}

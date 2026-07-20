@@ -1,6 +1,6 @@
 # Dify DSL 完整示例
 
-These examples target new generated DSL with `version: "0.6.0"`. Model provider
+These graph examples target new generated DSL with `version: "0.7.0"`. Model provider
 and plugin dependency identifiers are placeholders unless copied from a real
 workspace export; replace them with exact exported identifiers before production
 import.
@@ -24,7 +24,7 @@ app:
   mode: workflow
   use_icon_as_answer_icon: false
 kind: app
-version: "0.6.0"
+version: "0.7.0"
 dependencies: []
 workflow:
   conversation_variables: []
@@ -152,7 +152,7 @@ app:
   mode: workflow
   use_icon_as_answer_icon: false
 kind: app
-version: "0.6.0"
+version: "0.7.0"
 dependencies: []
 workflow:
   conversation_variables: []
@@ -392,7 +392,7 @@ app:
   mode: workflow
   use_icon_as_answer_icon: false
 kind: app
-version: "0.6.0"
+version: "0.7.0"
 dependencies: []
 workflow:
   conversation_variables: []
@@ -553,7 +553,7 @@ app:
   mode: advanced-chat
   use_icon_as_answer_icon: false
 kind: app
-version: "0.6.0"
+version: "0.7.0"
 dependencies: []
 workflow:
   conversation_variables:

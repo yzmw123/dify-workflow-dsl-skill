@@ -1,0 +1,10 @@
+version: "0.7.0"
+kind: app
+app: {name: Disconnected, mode: workflow}
+dependencies: []
+workflow:
+  graph:
+    nodes:
+      - {id: start, type: custom, data: {type: start, title: Start, variables: []}}
+      - {id: end, type: custom, data: {type: end, title: End, outputs: []}}
+    edges: []

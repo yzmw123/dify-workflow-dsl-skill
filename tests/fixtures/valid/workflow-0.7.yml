@@ -1,0 +1,55 @@
+version: "0.7.0"
+kind: app
+app:
+  name: Normalize
+  mode: workflow
+dependencies: []
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  graph:
+    nodes:
+      - id: start
+        type: custom
+        data:
+          type: start
+          title: Start
+          variables:
+            - {label: Input, variable: input_text, type: paragraph, required: true}
+      - id: normalize
+        type: custom
+        data:
+          type: code
+          title: Normalize
+          code_language: python3
+          code: |
+            def main(input_text: str) -> dict:
+                return {"result": input_text.strip()}
+          variables:
+            - variable: input_text
+              value_selector: [start, input_text]
+          outputs:
+            result: {type: string}
+      - id: end
+        type: custom
+        data:
+          type: end
+          title: End
+          outputs:
+            - variable: result
+              value_selector: [normalize, result]
+    edges:
+      - id: start-source-normalize-target
+        source: start
+        target: normalize
+        sourceHandle: source
+        targetHandle: target
+        type: custom
+        data: {sourceType: start, targetType: code}
+      - id: normalize-source-end-target
+        source: normalize
+        target: end
+        sourceHandle: source
+        targetHandle: target
+        type: custom
+        data: {sourceType: code, targetType: end}

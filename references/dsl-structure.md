@@ -5,7 +5,7 @@ and import/export compatibility.
 
 ## Contents
 
-- Official baseline
+- Version baselines
 - Top-level YAML
 - Mode rules
 - Dependencies
@@ -14,14 +14,16 @@ and import/export compatibility.
 - Variable references
 - Workflow variables
 - Import-sensitive details
-- Agent-chat/model-config apps
+- Agent App and legacy model-config apps
 
-## Official Baseline
+## Version Baselines
 
-- Dify's source declares `CURRENT_APP_DSL_VERSION = "0.6.0"`.
+- Dify 1.16.0 declares `CURRENT_APP_DSL_VERSION = "0.7.0"`; Dify 1.15.0
+  declares `"0.6.0"`.
 - Import expects `version` to be a string.
-- New generated DSL should target `version: "0.6.0"` unless the user explicitly
-  requests compatibility with an older Dify workspace.
+- New Dify 1.16.x DSL should target `version: "0.7.0"`. Use `"0.6.0"` for
+  Dify 1.15.x compatibility, and preserve supported versions during review unless
+  migration was requested.
 - Dify can backfill latest dependencies for very old imports (`<=0.1.5`) when
   `dependencies` is absent. For new DSL, explicit dependencies are safer for
   cross-workspace import.
@@ -30,14 +32,14 @@ and import/export compatibility.
 
 Primary sources used for this skill:
 
-- Dify DSL version constant:
-  https://github.com/langgenius/dify/blob/main/api/constants/dsl_version.py
+- Dify 1.16.0 DSL version constant:
+  https://github.com/langgenius/dify/blob/1.16.0/api/constants/dsl_version.py
 - Dify app DSL import/export service:
-  https://github.com/langgenius/dify/blob/main/api/services/app_dsl_service.py
+  https://github.com/langgenius/dify/blob/1.16.0/api/services/app_dsl_service.py
 - Dify dependency analysis:
-  https://github.com/langgenius/dify/blob/main/api/services/plugin/dependencies_analysis.py
+  https://github.com/langgenius/dify/blob/1.16.0/api/services/plugin/dependencies_analysis.py
 - Dify workflow frontend types:
-  https://github.com/langgenius/dify/blob/main/web/app/components/workflow/types.ts
+  https://github.com/langgenius/dify/blob/1.16.0/web/app/components/workflow/types.ts
 - Sample workflow repositories:
   https://github.com/BannyLon/DifyAIA,
   https://github.com/svcvit/Awesome-Dify-Workflow,
@@ -54,10 +56,10 @@ app:
   icon: "🤖"
   icon_type: emoji
   icon_background: "#FFEAD5"
-  mode: advanced-chat       # workflow | advanced-chat | chat | completion | agent-chat
+  mode: advanced-chat       # workflow | advanced-chat | chat | completion | agent-chat | agent (0.7.0)
   use_icon_as_answer_icon: false
 kind: app
-version: "0.6.0"
+version: "0.7.0"
 dependencies: []
 workflow:
   conversation_variables: []
@@ -105,10 +107,12 @@ workflow:
 | `chat` | legacy/simple chat app | model config | model config |
 | `completion` | legacy completion app | model config/start inputs | model config |
 | `agent-chat` | legacy agent chat app | model config | model config |
+| `agent` | portable top-level Agent App (0.7.0) | Agent package/soul | Agent runtime |
 
-For new generated DSL, prefer `workflow` or `advanced-chat`. Default to
+For new graph DSL, prefer `workflow` or `advanced-chat`. Default to
 `workflow` unless the user needs Chatflow behavior such as multi-turn memory,
-`sys.query`, `sys.files`, or answer streaming.
+`sys.query`, `sys.files`, or answer streaming. Use `agent` only with the 0.7.0
+top-level `agent` and `agent_packages` structure in `official-0.7-target.md`.
 
 ## Dependencies
 
@@ -162,6 +166,7 @@ Common dependency sources:
   `plugin_unique_identifier` when exported in the node
 - Agent strategies and built-in tools inside agent nodes
 - Knowledge retrieval/indexing and datasource nodes
+- Providers/tools nested inside DSL 0.7.0 Agent packages
 
 Official export dependency extraction currently reads model providers from LLM,
 question-classifier, parameter-extractor, knowledge-retrieval rerank/embedding
@@ -171,7 +176,7 @@ more detail than a hand-written dependency list.
 
 ## Official Node Type Set
 
-Current Dify workflow node types include:
+Dify 1.16 workflow node types include:
 
 ```text
 start, end, answer, llm, knowledge-retrieval, question-classifier, if-else,
@@ -260,6 +265,7 @@ Handle conventions:
 - Linear edge: `sourceHandle: source`, `targetHandle: target`
 - `if-else`: source handle is the case ID (`"true"`, `"false"`, or UUID)
 - `question-classifier`: source handle is the class ID (`"1"`, `"2"`, ...)
+- `human-input`: source handle is a configured `user_actions[].id`
 - Iteration/loop internals: include `isInIteration` or `isInLoop` and the parent
   node ID fields when exported by Dify
 
@@ -327,8 +333,9 @@ Supported value types commonly include `string`, `number`, `boolean`, `object`,
   Some real DSLs leave `version: 0.3.0` unquoted and it often parses as a string,
   but quoting avoids YAML parser differences.
 - Keep `sourceType`/`targetType` synchronized with each endpoint node's `data.type`.
-- Do not omit final nodes: `workflow` needs `end`; `advanced-chat` needs at least
-  one reachable `answer`.
+- Do not omit final nodes: a normal `workflow` needs `end`; `advanced-chat` needs
+  at least one reachable `answer`. A trigger-based side-effect workflow can omit
+  `end` intentionally, but then it returns no normal outputs.
 - `agent-chat`, `chat`, and `completion` may use top-level `model_config` instead
   of `workflow.graph`; this is common in legacy/public exports.
 - Do not hardcode real plugin credentials. Exported plugin authorization generally
@@ -338,7 +345,29 @@ Supported value types commonly include `string`, `number`, `boolean`, `object`,
   tool identity and parameters, and prefer copying `paramSchemas` from an export
   if the target Dify import complains.
 
-## Agent-Chat / Model Config Apps
+## DSL 0.7.0 Agent App
+
+An Agent App does not use `workflow.graph` or legacy `model_config`. It resolves
+a portable Agent package:
+
+```yaml
+version: "0.7.0"
+kind: app
+app: {name: "Agent", mode: agent}
+agent: {package_ref: agent_1}
+agent_packages:
+  agent_1:
+    schema_version: 1
+    metadata: {name: "Agent", description: "", role: ""}
+    soul: {schema_version: 1}
+    omitted_assets: []
+dependencies: []
+```
+
+See `official-0.7-target.md` for package sanitization, omitted assets, and Agent
+v2 workflow nodes.
+
+## Agent-Chat / Legacy Model Config Apps
 
 Some public DSLs, especially `agent-chat`, do not have a workflow graph. They use
 top-level `model_config`:

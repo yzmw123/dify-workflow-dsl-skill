@@ -1,0 +1,11 @@
+version: "9.9.9"
+kind: app
+app: {name: Future, mode: workflow}
+dependencies: []
+workflow:
+  graph:
+    nodes:
+      - {id: start, type: custom, data: {type: start, title: Start, variables: []}}
+      - {id: end, type: custom, data: {type: end, title: End, outputs: []}}
+    edges:
+      - {id: start-source-end-target, source: start, target: end, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: end}}

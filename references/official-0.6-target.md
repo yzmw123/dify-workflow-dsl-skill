@@ -1,7 +1,7 @@
-# Official 0.6.0 Target
+# Official DSL 0.6.0 Compatibility Target
 
-This reference records what the skill should treat as authoritative for new
-Dify app DSL generation.
+Use this reference when the target is Dify 1.15.x or an existing DSL 0.6.0 app.
+For new Dify 1.16.x generation, use `official-0.7-target.md` instead.
 
 ## Contents
 
@@ -18,22 +18,22 @@ Dify app DSL generation.
 
 ## Sources Checked
 
-- Dify current DSL constant:
-  https://github.com/langgenius/dify/blob/main/api/constants/dsl_version.py
+- Dify 1.15.0 DSL constant:
+  https://github.com/langgenius/dify/blob/1.15.0/api/constants/dsl_version.py
 - Dify app import/export service:
-  https://github.com/langgenius/dify/blob/main/api/services/app_dsl_service.py
+  https://github.com/langgenius/dify/blob/1.15.0/api/services/app_dsl_service.py
 - Dify plugin dependency analysis:
-  https://github.com/langgenius/dify/blob/main/api/services/plugin/dependencies_analysis.py
+  https://github.com/langgenius/dify/blob/1.15.0/api/services/plugin/dependencies_analysis.py
 - Dify plugin dependency entity:
-  https://github.com/langgenius/dify/blob/main/api/core/plugin/entities/plugin.py
+  https://github.com/langgenius/dify/blob/1.15.0/api/core/plugin/entities/plugin.py
 - Dify workflow frontend types:
-  https://github.com/langgenius/dify/blob/main/web/app/components/workflow/types.ts
+  https://github.com/langgenius/dify/blob/1.15.0/web/app/components/workflow/types.ts
 - Dify workflow common-node registry:
-  https://github.com/langgenius/dify/blob/main/web/app/components/workflow/constants/node.ts
+  https://github.com/langgenius/dify/blob/1.15.0/web/app/components/workflow/constants/node.ts
 
 ## Target Rule
 
-- New generated Dify app DSL should use `version: "0.6.0"`.
+- Dify 1.15.x-compatible app DSL should use `version: "0.6.0"`.
 - Keep `version` quoted. Dify import expects a string and rejects non-string
   values.
 - Use `kind: app`.
@@ -44,7 +44,7 @@ Dify app DSL generation.
 
 ## Import And Version Compatibility
 
-Dify compares imported DSL version with the current version:
+Dify compares imported DSL version with the server's current version:
 
 - Same version or same minor/micro-compatible older version: normal import.
 - Older minor version: import can complete with warnings.
@@ -148,7 +148,7 @@ practice. Preserve exported `dependencies` whenever available.
 
 ## Official Node Type Set
 
-The current workflow frontend type enum includes:
+The Dify 1.15 workflow frontend type enum includes:
 
 ```text
 start, end, answer, llm, knowledge-retrieval, question-classifier, if-else,
@@ -217,6 +217,6 @@ Additional scan on 2026-05-11:
 - `g-krishna0/dify-export-test`: 87 parsed app DSL, `0.6.0`: 0
 - `Petrus-Han/dify-usecase-playground`: 3 parsed app DSL, `0.6.0`: 1
 
-Therefore the skill targets 0.6.0 from official source code and uses public YAML
-corpora only for real-world graph patterns, trigger workflow examples, legacy
-import behavior, and tool-node shape diversity.
+This historical sample evidence remains useful for 0.6.0 compatibility. The
+skill now defaults new Dify 1.16.x files to 0.7.0 while retaining these rules and
+validator coverage for existing 0.6.0 apps.

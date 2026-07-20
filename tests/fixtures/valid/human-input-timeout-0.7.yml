@@ -1,0 +1,35 @@
+version: "0.7.0"
+kind: app
+app: {name: Approval With Timeout, mode: workflow}
+dependencies: []
+workflow:
+  graph:
+    nodes:
+      - {id: start, type: custom, data: {type: start, title: Start, variables: []}}
+      - id: review
+        type: custom
+        data:
+          type: human-input
+          title: Review
+          delivery_methods: [{id: webapp, type: webapp, enabled: true}]
+          form_content: "Decision: {{#$output.decision#}}"
+          inputs: []
+          user_actions: [{id: approve, title: Approve, button_style: primary}]
+          timeout: 1
+          timeout_unit: hour
+      - id: approved
+        type: custom
+        data:
+          type: end
+          title: Approved
+          outputs: [{variable: action, value_selector: [review, __action_id]}]
+      - id: timed_out
+        type: custom
+        data:
+          type: end
+          title: Timed out
+          outputs: [{variable: content, value_selector: [review, __rendered_content]}]
+    edges:
+      - {id: start-review, source: start, target: review, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: human-input}}
+      - {id: review-approved, source: review, target: approved, sourceHandle: approve, targetHandle: target, data: {sourceType: human-input, targetType: end}}
+      - {id: review-timeout, source: review, target: timed_out, sourceHandle: __timeout, targetHandle: target, data: {sourceType: human-input, targetType: end}}

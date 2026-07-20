@@ -12,7 +12,7 @@ wrapper from `dsl-structure.md`.
 - Variables and documents: variable-aggregator, assigner, document-extractor,
   list-operator
 - Knowledge: knowledge-retrieval, knowledge-index
-- Agents and containers: agent, iteration, loop
+- Agents and containers: legacy agent, Agent v2, iteration, loop
 - Human/trigger/canvas nodes: human-input, trigger-schedule, trigger-webhook,
   trigger-plugin, custom-note
 
@@ -351,7 +351,7 @@ newer marketplace/package exports but are not universal. Built-in, MCP, API, and
 workflow tools may omit them. Preserve these fields when copying from an export;
 do not invent exact plugin identifiers.
 
-## agent
+## legacy agent node
 
 ```yaml
 title: "Agent"
@@ -380,6 +380,36 @@ agent_parameters:
 output_schema: null
 selected: false
 ```
+
+This is the plugin-strategy Agent node used by 0.6.0 and still seen in 0.7.0
+graphs. Preserve its exported strategy/provider fields and dependencies.
+
+## Agent v2 (DSL 0.7.0)
+
+```yaml
+title: "Researcher"
+type: agent
+version: "2"
+agent_node_kind: dify_agent
+agent_binding:
+  binding_type: inline_agent
+  package_ref: agent_1
+agent_job:
+  schema_version: 1
+  mode: tell_agent_what_to_do
+  workflow_prompt: "Research the task and return a concise result."
+  previous_node_output_refs:
+    - selector: [start, task]
+  declared_outputs: []
+  human_contacts: []
+  metadata: {}
+selected: false
+```
+
+Add the referenced definition under top-level `agent_packages`. An empty
+`declared_outputs` exposes `text`, `files`, and `json`; otherwise downstream
+selectors use the declared names. Agent packages are portable but credentials,
+uploaded files/skills, and workspace contacts may be omitted during export.
 
 ## iteration
 
@@ -451,26 +481,43 @@ selected: false
 
 Use only when the target Dify version supports knowledge indexing in workflows.
 
-## human-input / human-feedback
+## human-input
 
 ```yaml
 title: "人工确认"
 type: human-input
-variables:
-  - label: "是否继续"
-    variable: approved
-    type: select
-    required: true
-    options:
-      - label: "继续"
-        value: "yes"
-      - label: "停止"
-        value: "no"
+delivery_methods:
+  - id: webapp
+    type: webapp
+    enabled: true
+form_content: "请检查生成结果，并填写意见。"
+inputs:
+  - type: paragraph
+    output_variable_name: comment
+    default:
+      type: constant
+      selector: []
+      value: ""
+user_actions:
+  - id: approve
+    title: "通过"
+    button_style: primary
+  - id: reject
+    title: "退回"
+    button_style: default
+timeout: 3
+timeout_unit: day
 selected: false
 ```
 
-These nodes are version-sensitive. Prefer copying an export from the target Dify
-workspace for production DSL.
+Each input `output_variable_name` is a node output and must be unique. Human
+Input also exposes `__action_id`, `__action_value`, and `__rendered_content`.
+Each normal outgoing edge uses a user action ID (`approve` or `reject` above) as
+`sourceHandle`; a timeout branch uses `__timeout` in exported graphs. Action IDs
+are identifiers with a 20-character maximum; timeout units are `hour` or `day`.
+Input types are `paragraph`, `select`, `file`, and `file-list`. Non-webapp
+delivery methods can contain workspace-specific config, so copy them from a
+target-workspace export.
 
 ## trigger-schedule
 

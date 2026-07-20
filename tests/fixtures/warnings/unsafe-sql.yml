@@ -1,0 +1,29 @@
+version: "0.7.0"
+kind: app
+app: {name: Unsafe SQL, mode: workflow}
+dependencies:
+  - current_identifier: null
+    type: marketplace
+    value: {marketplace_plugin_unique_identifier: hjlarry/database:0.0.6@test, version: null}
+workflow:
+  graph:
+    nodes:
+      - {id: start, type: custom, data: {type: start, title: Start, variables: [{label: Name, variable: name, type: text-input, required: true}]}}
+      - id: database
+        type: custom
+        data:
+          type: tool
+          title: Database
+          provider_id: hjlarry/database/database
+          provider_name: hjlarry/database/database
+          provider_type: builtin
+          tool_name: sql_execute
+          tool_label: SQL Execute
+          tool_parameters:
+            query:
+              type: mixed
+              value: "SELECT * FROM users WHERE name = '{{#start.name#}}'; DROP TABLE audit;"
+      - {id: end, type: custom, data: {type: end, title: End, outputs: []}}
+    edges:
+      - {id: start-source-database-target, source: start, target: database, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: tool}}
+      - {id: database-source-end-target, source: database, target: end, sourceHandle: source, targetHandle: target, data: {sourceType: tool, targetType: end}}

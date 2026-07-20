@@ -3,8 +3,8 @@
 This reference records observations from real public Dify DSL files. Use it to
 calibrate generated YAML against workflows that people actually exported and ran.
 For new DSL generation, do not treat these public files as the latest schema
-authority; Dify's official current app DSL version is `0.6.0`, while this public
-corpus is older.
+authority. The corpus predates Dify 1.16's DSL `0.7.0`; use official source for
+the target version and this corpus for graph/design evidence.
 
 ## Contents
 
@@ -39,8 +39,8 @@ Version scan on 2026-05-07:
 - `wwwzhouhui/dify-for-dsl`: `0.1.2`-`0.5.0`, no `0.6.0`.
 
 Conclusion: these samples are valuable real-world DSL evidence, but only as
-legacy/import-shape and workflow-design material. Target new generation from
-`references/official-0.6-target.md`.
+legacy/import-shape and workflow-design material. Target Dify 1.16.x generation
+from `references/official-0.7-target.md`; retain the 0.6.0 reference for 1.15.x.
 
 ## Additional Corpus Checked On 2026-05-11
 
@@ -273,8 +273,8 @@ Differences for this skill:
 
 - Do not require `GEMINI_API_KEY`, `DIFY_API_KEY`, or a Streamlit UI. The agent
   using this skill is the generator.
-- Target official `version: "0.6.0"` for new DSL, while treating old samples as
-  compatibility/workflow-design evidence.
+- Target official `version: "0.7.0"` for new Dify 1.16.x DSL, while treating old
+  samples as compatibility/workflow-design evidence.
 - Prefer exported plugin/tool nodes for reliability instead of synthesizing exact
   plugin schemas from names alone.
 
@@ -342,5 +342,6 @@ MCP, API, or workflow tools.
 - Treat trigger-driven Slack/Feishu/webhook/schedule automations as `workflow`.
 - Prefer generated `workflow` or `advanced-chat` for new work, but understand
   legacy/public DSLs when reviewing or adapting.
-- For new generated DSL, use official `version: "0.6.0"` and only borrow graph
-  patterns from these older public samples.
+- For new Dify 1.16.x DSL, use official `version: "0.7.0"`; use `"0.6.0"` only
+  for Dify 1.15.x compatibility, and borrow graph patterns—not version authority—
+  from these older public samples.

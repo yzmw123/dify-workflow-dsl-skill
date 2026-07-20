@@ -1,160 +1,177 @@
 ---
 name: dify-workflow-dsl
 description: >
-  Create, modify, review, and debug Dify Workflow/Chatflow DSL YAML files that can
-  be imported into Dify. Use for Dify app DSL, workflow YAML, advanced-chat YAML,
-  graph nodes/edges, variables, tool nodes, plugin dependencies, database read/write
-  tools, and import/export compatibility questions.
+  Create, modify, review, migrate, and debug import-ready Dify App DSL YAML for
+  DSL 0.6.0 and 0.7.0. Use for Workflow, Chatflow, Agent App, Agent v2 workflow
+  nodes, Human Input, graph wiring, variables, plugin dependencies, tools,
+  database operations, and import/export compatibility.
 ---
 
 # Dify Workflow DSL
 
-Use this skill to produce import-ready Dify DSL YAML. Dify calls the exported
-workflow file a DSL; it is a YAML app definition with app metadata, dependencies,
-workflow variables/features, and a ReactFlow-like graph of nodes and edges.
+Produce import-ready Dify App DSL YAML. Treat official Dify source as schema
+authority and exported files from the target workspace as authority for dynamic
+plugin/tool fields.
 
 ## Core Workflow
 
-1. Start with mode intake. For new DSL, default to `workflow`. Use or offer
-   `advanced-chat` only when the user needs Chatflow behavior: multi-turn chat,
-   memory, `sys.query`, `sys.files`, streaming answers, or `answer` nodes.
-2. Clarify only import-blocking requirements: app mode (`workflow` or `advanced-chat`),
-   required inputs, model/provider, installed plugins, knowledge bases, secrets,
-   trigger source, and expected outputs. If the user has not chosen a mode, say
-   that you will proceed with `workflow` by default unless they prefer Chatflow.
-3. Choose the DSL version. For new DSL, target official Dify app DSL
-   `version: "0.6.0"` unless the user explicitly asks for old-version
-   compatibility. Always write `version` as a YAML string.
-4. Sketch the graph before writing YAML: start/input or trigger, transform/reasoning nodes,
-   tools, branches/loops, final `end` or `answer`.
-5. Use stable string node IDs and connect every edge with matching `sourceType`,
-   `targetType`, `sourceHandle`, and `targetHandle`.
-6. Add `dependencies` for every plugin-backed LLM provider, tool, agent, knowledge
-   feature, and model config. Support marketplace, package, and GitHub dependency
-   entries; use exact exported plugin identifiers when available.
-7. For any plugin/tool not covered by existing examples, follow
-   `references/plugin-marketplace-tools.md`: prefer a minimal exported DSL from
-   the user's Dify workspace, then plugin source/package metadata, then marketplace
-   pages. Be explicit about reliability when exact tool schemas are unavailable.
-8. Validate locally with `python3 scripts/validate_dsl.py <file.yml>` before giving
-   the user the YAML path.
+1. Identify the target Dify/DSL version before authoring. For a new file, default
+   to DSL `0.7.0` (Dify 1.16.x). Use `0.6.0` for Dify 1.15.x compatibility.
+   Preserve an existing supported version unless the user asks to migrate it.
+   Always quote `version`.
+2. Choose the app mode:
+   - `workflow` for one-shot, batch, triggered, integration, and structured-output
+     automations.
+   - `advanced-chat` for multi-turn chat, memory, `sys.query`, `sys.files`, and
+     `answer` nodes.
+   - `agent` only for a top-level portable Agent App in DSL `0.7.0`.
+3. Clarify only import-blocking facts: inputs, outputs, model/provider, installed
+   plugins, knowledge bases, secrets, trigger source, or required Agent package.
+4. Sketch the graph or Agent package before writing YAML. A graph needs an entry,
+   connected processing nodes, and a reachable `end`/`answer` unless a triggered
+   side-effect workflow intentionally returns nothing.
+5. Add a top-level dependency for every referenced marketplace/package/GitHub
+   plugin. Preserve exact exported identifiers.
+6. Write stable string IDs and connect edges with existing endpoints, matching
+   `sourceType`/`targetType`, and valid branch `sourceHandle` values.
+7. Run `python3 scripts/validate_dsl.py --target-version <version> <file.yml>`.
+   Fix all errors. Explain warnings that remain intentionally.
 
-## New DSL Intake
+## Version Policy
 
-Use this compact intake when creating a workflow from a plain-language request:
+| Target | Use | Key capabilities |
+| --- | --- | --- |
+| Dify 1.15.x / compatibility | `"0.6.0"` | Workflow, Chatflow, legacy model-config apps and legacy Agent nodes |
+| Dify 1.16.x / new generation | `"0.7.0"` | Everything above plus top-level Agent App packages and portable Agent v2 workflow nodes |
 
-- **Mode**: default `workflow`; choose `advanced-chat` for Chatflow, memory, or
-  conversational answer nodes.
-- **Trigger**: manual start variables, chat input, schedule, webhook, plugin event,
-  or another workflow calling this one as a tool.
-- **Inputs**: text, files, structured JSON, form fields, dataset IDs, external event
-  payload, or tool credentials.
-- **Output**: returned `end` values, chat `answer`, side-effect tool action
-  (Slack/Feishu/email/DB/API), or generated file.
-- **Shape**: straight-line transform, branch classifier, extractor/validator,
-  retrieval-augmented answer, loop/iteration over records, or agent with tools.
+Do not upgrade by changing only the version string. A 0.7.0 Agent App or Agent v2
+node needs the package structures described below. When the target workspace is
+unknown and import compatibility matters, state the 1.16.x assumption.
+
+## DSL 0.7.0 Rules
+
+- Top-level Agent App shape:
+
+  ```yaml
+  version: "0.7.0"
+  kind: app
+  app: {name: "Agent", mode: agent}
+  agent: {package_ref: agent_1}
+  agent_packages:
+    agent_1:
+      schema_version: 1
+      metadata: {name: "Agent", description: "", role: ""}
+      soul: {schema_version: 1}
+      omitted_assets: []
+  dependencies: []
+  ```
+
+- Portable Agent v2 workflow nodes use `data.type: agent`, `version: "2"`,
+  `agent_node_kind: dify_agent`, `agent_binding.package_ref`, and `agent_job`.
+  Their referenced package must exist in top-level `agent_packages`.
+- If `agent_job.declared_outputs` is empty, runtime outputs are `text`, `files`,
+  and `json`; otherwise use the declared output names.
+- Agent exports deliberately omit or sanitize credentials, uploaded files,
+  skills, and workspace bindings. Tell the user to review import warnings and
+  reconnect missing assets in the target workspace.
+- Human Input uses `delivery_methods`, `form_content`, `inputs`, `user_actions`,
+  `timeout`, and `timeout_unit`. Each outgoing edge uses a `user_actions[].id` as
+  `sourceHandle` (or `__timeout` for timeout); input names and the special
+  `__action_id`, `__action_value`, and `__rendered_content` fields are outputs.
+
+## Scalable Generation
+
+For a large workflow, separate probabilistic generation from deterministic
+assembly:
+
+1. Build a compact plan/IR listing node IDs, types, inputs, outputs, branches,
+   package refs, and dependencies.
+2. Generate independent leaf-node payloads from that plan. Do not let separate
+   builders invent conflicting IDs or edges.
+3. Assemble nodes and edges centrally; normalize IDs, handles, layout, package
+   refs, selectors, and dependencies.
+4. Validate structure, reachability, cycles, references, branch handles, package
+   refs, and plugin coverage. Regenerate only the failing component.
+
+This mirrors Dify 1.16's workflow-generator direction: planning and node building
+can be model-assisted, while post-processing and structural validation remain
+deterministic.
 
 ## Reference Map
 
-Load only the relevant reference files:
+Load only what is needed:
 
-- `references/official-0.6-target.md` for official current-version rules from
-  Dify source: DSL version, import/export behavior, dependency types, current node
-  enum, trigger/datasource cautions, and public sample availability.
-- `references/dsl-structure.md` for top-level YAML, variables, dependencies,
-  edges, handles, and import/export rules.
-- `references/node-schemas.md` for node-specific schemas and examples.
-- `references/database-tools.md` for PostgreSQL/SQL read-write tool nodes,
-  including `spance/db_client_node` and `hjlarry/database` patterns from the
-  user's exported DSLs.
-- `references/usecase-node-selection.md` for choosing workflow vs Chatflow,
-  trigger style, and node combinations from business requirements.
-- `references/plugin-marketplace-tools.md` for defining new plugin tool nodes from
-  Dify Marketplace, GitHub plugin repos, `.difypkg` packages, or minimal exports.
-- `references/real-world-yml-study.md` for observations from 262 parsed public
-  Dify app DSL files, an AI DSL generator project, and representative samples.
-  These samples are real-world compatibility evidence, not the target version
-  authority.
-- `references/complete-examples.md` for full importable examples and graph layouts.
-
-## Required Decisions
-
-- **Mode**: default to `workflow` for one-shot, batch, triggered, integration,
-  and side-effect automations; use `advanced-chat` for Chatflow, `sys.query`,
-  `sys.files`, memory, and `answer` nodes.
-- **Inputs**: in `workflow`, define start `variables`; in `advanced-chat`, keep
-  start variables empty unless the app needs explicit form inputs.
-- **Secrets**: do not hardcode real API keys, DB passwords, or webhook secrets.
-  Prefer Dify plugin authorization, `env` variables, or clear placeholders.
-- **Database access**: prefer parameterized tool calls (`$arg0`, `$arg1`, ...)
-  over interpolated SQL. For LLM-generated SQL, restrict to SELECT unless the
-  user explicitly asks for writes and accepts the risk.
-- **Model/provider**: keep provider names exactly as Dify exports them, for example
-  `langgenius/tongyi/tongyi`, `openai`, or a marketplace provider path.
-- **New plugin tools**: do not promise import-and-run reliability from a tool name
-  alone. Ask for a minimal exported DSL or plugin source/package when exact
-  `provider_id`, `tool_name`, parameters, and authorization schema are unknown.
+- `references/official-0.7-target.md`: current 0.7.0 source-backed rules, Agent
+  packages, Agent v2, Human Input, import/export behavior, and generation scale.
+- `references/official-0.6-target.md`: 0.6.0 compatibility baseline.
+- `references/dsl-structure.md`: top-level YAML, variables, graph wrappers,
+  dependencies, selectors, and edges.
+- `references/node-schemas.md`: node payload schemas and examples.
+- `references/database-tools.md`: PostgreSQL/SQL read-write patterns.
+- `references/usecase-node-selection.md`: business requirement to graph pattern.
+- `references/plugin-marketplace-tools.md`: rare/dynamic plugin schema workflow.
+- `references/real-world-yml-study.md`: legacy and real-world design evidence.
+- `references/complete-examples.md`: complete 0.7.0 graph examples.
 
 ## Authoring Rules
 
-- For newly generated DSL, use `version: "0.6.0"` and top-level `kind: app`.
-- `workflow.graph.nodes` and `workflow.graph.edges` must both exist.
-- Node wrapper `type` is normally `custom`; `data.type` is the real node kind.
-- Every node `id` should be a string. Do not reuse IDs.
-- Edges must reference existing node IDs.
-- Branch edges from `if-else` use source handles from case IDs, commonly `"true"`,
-  `"false"`, or a UUID custom case ID.
-- Question classifier source handles use class IDs such as `"1"`, `"2"`.
-- Iteration/loop internals need `isInIteration`/`isInLoop`, parent IDs, and start
-  helper nodes when exported by Dify.
-- `value_selector` and `variable_selector` are arrays, for example
-  `["node_id", "text"]`; prompt interpolation is `{{#node_id.field#}}`.
-- Code nodes must define the runtime entrypoint: Python uses `def main(...)`,
-  JavaScript/TypeScript uses `function main(...)` or an equivalent `main`
-  function. Return keys must match `outputs`.
-- Tool nodes must include `provider_id`, `provider_name`, `provider_type`,
-  `tool_name`, `tool_label`, and `tool_parameters`. `plugin_id`,
-  `plugin_unique_identifier`, and `tool_node_version` are common but not universal;
-  preserve them when copied from an export.
-- `provider_type` may be `builtin`, `api`, `workflow`, or `mcp`.
-- Dependencies may use `type: marketplace` with `marketplace_plugin_unique_identifier`,
-  `type: package` with `plugin_unique_identifier`, or `type: github` with
-  `github_plugin_unique_identifier` plus repo/package metadata.
-- `custom-note` nodes are valid canvas annotations and may have empty `data.type`.
-- `agent-chat`, `chat`, and `completion` apps may be top-level `model_config`
-  apps with no `workflow.graph`; do not force graph rules onto them when reviewing
-  legacy exports.
-- For public examples, replace tenant-specific icon URLs and credentials with
-  placeholders unless they are harmless exported metadata.
+- `workflow.graph.nodes` and `workflow.graph.edges` must both exist for graph
+  modes. Node wrapper `type` is normally `custom`; `data.type` is the runtime
+  node kind. `custom-note` is non-executable.
+- `workflow` entries are `start` or trigger nodes. Non-trigger workflows need a
+  reachable `end`; `advanced-chat` needs exactly one `start` and a reachable
+  `answer`.
+- Every runtime node must be reachable. Do not create accidental cycles.
+- `if-else` outgoing handles are case IDs or `false`; question classifier handles
+  are class IDs; Human Input handles are user-action IDs.
+- Selectors are arrays such as `["node_id", "text"]`; prompt interpolation is
+  `{{#node_id.field#}}`. Refer only to declared/known outputs.
+- Python Code nodes define `def main(...)`; JavaScript/TypeScript Code nodes
+  define `main`. Return keys match `outputs`.
+- Tool nodes include exact `provider_id`, `provider_name`, `provider_type`,
+  `tool_name`, `tool_label`, and `tool_parameters`. Preserve optional exported
+  plugin/tool metadata rather than inventing it.
+- `provider_type` can be `builtin`, `api`, `workflow`, or `mcp`. Workspace-local
+  Workflow/API/MCP identities may be non-portable.
+- Never hardcode API keys, database passwords, webhook secrets, credential IDs,
+  or private dataset IDs. Use authorization, environment variables, or explicit
+  placeholders.
+- Prefer parameterized SQL. Treat interpolated SQL, multi-statements, mutation,
+  and DDL as risks requiring explicit review.
 
-## Validation Checklist
+## Dynamic Plugin Reliability
 
-Before finalizing a DSL:
+For a plugin/tool not covered by known schemas, use evidence in this order:
 
-- YAML parses cleanly.
-- `version` is a string and `app.mode` matches terminal node type:
-  non-trigger `workflow` uses `end`, `advanced-chat` uses `answer`, and
-  trigger/side-effect workflows document why they may finish at a tool.
-- Dependencies cover all plugin-backed nodes.
-- All graph edges resolve to existing nodes and matching data types.
-- Start variables, conversation variables, and environment variables have unique
-  names. Include selectors for new variables; tolerate missing conversation
-  selectors when reviewing older exports.
-- Every LLM has a model and prompt template.
-- Every tool has required provider/tool fields and parameter values.
-- New or rare plugin tools are backed by an exported node, plugin package/source,
-  or clearly labeled as a best-effort draft that still needs Dify import testing.
-- SQL has no trailing comma before `)` and uses bound parameters for dynamic values.
-- The final answer tells the user which file was written and whether validation
-  passed.
+1. Minimal export from the user's target Dify workspace.
+2. Plugin source or `.difypkg` metadata.
+3. Marketplace documentation.
+4. Tool name alone only as a clearly labeled draft.
 
-## Useful Commands
+Do not promise import-and-run reliability without exact provider, tool,
+parameters, authorization schema, and dependency identity.
+
+## Validation
 
 ```bash
-python3 scripts/validate_dsl.py path/to/workflow.yml
-python3 scripts/validate_dsl.py examples/*.yml
+# Human-readable validation
+python3 scripts/validate_dsl.py workflow.yml
+
+# Enforce a target version
+python3 scripts/validate_dsl.py --target-version 0.7.0 workflow.yml
+
+# CI-friendly output; warnings also fail in strict mode
+python3 scripts/validate_dsl.py --format json --strict workflow.yml
+
+# Run the maintained regression set
+python3 -m unittest discover -s tests -v
 ```
 
-If the user only asks for a review, report import risks and behavioral bugs first,
-with file/line references when possible. If the user asks to create or modify a
-workflow, write or patch the YAML directly and validate it.
+The validator supports 0.6.0 and 0.7.0 and checks version/mode compatibility,
+Agent package refs, graph endpoints and reachability, cycles, branch handles,
+known outputs, Human Input schemas, dependencies, node basics, and SQL risks.
+
+If the user requests only review, report import blockers and behavioral defects
+first with precise locations. If asked to create or modify a DSL, write the YAML,
+validate it, and report the target version plus any remaining workspace-specific
+steps.

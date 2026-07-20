@@ -1,0 +1,43 @@
+version: "0.6.0"
+kind: app
+app: {name: Legacy Agent Workflow, mode: workflow}
+dependencies:
+  - current_identifier: null
+    type: marketplace
+    value: {marketplace_plugin_unique_identifier: langgenius/agent:0.0.23@test, version: null}
+  - current_identifier: null
+    type: marketplace
+    value: {marketplace_plugin_unique_identifier: langgenius/tongyi:0.1.36@test, version: null}
+workflow:
+  graph:
+    nodes:
+      - {id: start, type: custom, data: {type: start, title: Start, variables: []}}
+      - id: legacy_agent
+        type: custom
+        data:
+          type: agent
+          title: Agent
+          agent_strategy_provider_name: langgenius/agent/agent
+          agent_strategy_name: function_calling
+          agent_strategy_label: FunctionCalling
+          agent_parameters:
+            model:
+              type: constant
+              value:
+                provider: langgenius/tongyi/tongyi
+                name: qwen-plus
+                mode: chat
+                completion_params: {}
+            query: {type: constant, value: "Do the task."}
+            instruction: {type: constant, value: "Return a concise result."}
+            tools: {type: constant, value: []}
+      - id: end
+        type: custom
+        data:
+          type: end
+          title: End
+          outputs:
+            - {variable: result, value_selector: [legacy_agent, text]}
+    edges:
+      - {id: start-source-legacy_agent-target, source: start, target: legacy_agent, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: agent}}
+      - {id: legacy_agent-source-end-target, source: legacy_agent, target: end, sourceHandle: source, targetHandle: target, data: {sourceType: agent, targetType: end}}

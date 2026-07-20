@@ -1,0 +1,19 @@
+version: "0.7.0"
+kind: app
+app: {name: Missing Dependency, mode: workflow}
+dependencies: []
+workflow:
+  graph:
+    nodes:
+      - {id: start, type: custom, data: {type: start, title: Start, variables: []}}
+      - id: llm
+        type: custom
+        data:
+          type: llm
+          title: LLM
+          model: {provider: acme/models/provider, name: model, mode: chat}
+          prompt_template: [{role: user, text: Hello}]
+      - {id: end, type: custom, data: {type: end, title: End, outputs: [{variable: result, value_selector: [llm, text]}]}}
+    edges:
+      - {id: start-source-llm-target, source: start, target: llm, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: llm}}
+      - {id: llm-source-end-target, source: llm, target: end, sourceHandle: source, targetHandle: target, data: {sourceType: llm, targetType: end}}

@@ -1,0 +1,21 @@
+version: "0.7.0"
+kind: app
+app: {name: Unknown Output, mode: workflow}
+dependencies: []
+workflow:
+  graph:
+    nodes:
+      - {id: start, type: custom, data: {type: start, title: Start, variables: []}}
+      - id: code
+        type: custom
+        data:
+          type: code
+          title: Code
+          code_language: python3
+          code: "def main() -> dict:\n    return {'result': 'ok'}\n"
+          variables: []
+          outputs: {result: {type: string}}
+      - {id: end, type: custom, data: {type: end, title: End, outputs: [{variable: result, value_selector: [code, missing]}]}}
+    edges:
+      - {id: start-source-code-target, source: start, target: code, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: code}}
+      - {id: code-source-end-target, source: code, target: end, sourceHandle: source, targetHandle: target, data: {sourceType: code, targetType: end}}

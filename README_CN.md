@@ -13,16 +13,17 @@ AI 自动生成可以导入 Dify 的工作流文件。
 所以我让 AI 学习了 Dify 的开源代码、自己导出的 DSL，以及 GitHub 上公开
 的 Dify 工作流 DSL 示例，并把这些规律整理成了这个 skill。
 
-当前 skill 的目标版本是 Dify 官方源码声明的 app DSL `0.6.0`。在整理过程中，
-我系统学习了 Dify 官方源码、自己的导出文件，以及多个公开 DSL 示例仓库。
+当前 skill 对新文件默认面向 Dify 1.16 的 app DSL `0.7.0`，同时保留 Dify
+1.15.x 的 `0.6.0` 兼容能力。在整理过程中，我系统学习了 Dify 官方源码、
+自己的导出文件，以及多个公开 DSL 示例仓库。
 这些公开仓库一共提供了 262 个可解析的 Dify app DSL，覆盖了 Chatflow、
 Workflow、Agent、数据库读写、插件工具、知识库、文件处理、触发器集成、
 分支、循环等大量真实场景。
 
 需要说明的是，公开仓库里的 DSL 大多来自旧版本 Dify。新的样本中已经出现
-少量 `0.6.0` 导出，但整体仍以旧版为主。因此，本项目以 Dify 官方源码作为
-新 DSL 生成的权威依据，同时把这些公开 DSL 作为旧版本兼容性、真实图结构、
-触发器工作流和工具节点写法的参考。
+少量 `0.6.0` 导出，但整体仍以旧版为主，且早于 `0.7.0`。因此，本项目以
+Dify 的版本化官方源码作为 schema 权威，同时把公开 DSL 用于兼容性、真实
+图结构、触发器工作流和工具节点写法参考。
 
 English version: [README.md](./README.md)
 
@@ -48,9 +49,8 @@ AI 落地，以及政策、安全与合规。
 
 <img src="./assets/wechat-official-account.jpg" alt="硅基斥候 S01 微信公众号二维码" width="220">
 
-**当前版本：V2.0。** 之前的版本可以视为 V1.0：它解决的是“让 Agent 能写出
-可导入 Dify 的 DSL”这个基础问题。V2.0 在此基础上继续强化真实 YAML 学习、
-业务场景判断，以及 Agent Skills 规范对齐。
+**当前版本：V3.0。** V3.0 新增 DSL 0.7.0、可移植 Agent App、Agent v2
+工作流节点、重构后的机器可读验证器、回归测试集和 CI。
 
 ## 它解决什么问题
 
@@ -66,12 +66,29 @@ Dify 工作流很强，但手工搭建和手写 DSL 都容易踩坑：
 这个 skill 把 Dify DSL 结构、常见节点 schema、真实导出案例、数据库读写
 模式、插件市场工具规则和本地校验脚本整理成了一套可复用规范。
 
-新生成的工作流默认使用 `version: "0.6.0"`。公开仓库里的旧版 DSL 仍然很有
-价值，但不会被当作最新版 schema 的权威来源。
+面向 Dify 1.16.x 的新工作流默认使用 `version: "0.7.0"`；面向 Dify
+1.15.x 时可生成、保留并校验 `"0.6.0"`。公开仓库里的旧版 DSL 仍然很有
+价值，但不会被当作最新版 schema 权威。
 
 新建应用时，skill 默认按 Dify `workflow` 模式生成；当用户需要多轮对话、
 记忆、`sys.query`、聊天文件上传或 `answer` 节点时，再切换或建议
 `advanced-chat`。
+
+## V3.0 更新说明
+
+- 直接对照 Dify 源码 tag 确认版本边界：1.15.0 使用 DSL 0.6.0，1.16.0
+  使用 DSL 0.7.0。
+- 新增 `app.mode: agent`、顶层 `agent`/`agent_packages`、可移植 Agent 包，
+  以及 Agent v2 工作流节点规则。
+- 按官方 form/action schema 修正 Human Input，并校验 action edge handle。
+- 将验证器拆成可复用 Python 包，增加稳定诊断码、文本/JSON 输出、目标版本
+  校验和 strict 模式。
+- 新增图可达性、终点可达性、循环、分支 handle、输出引用、Agent package
+  ref、插件依赖覆盖和 SQL 风险等确定性检查。
+- 增加 0.6.0/0.7.0、Workflow/Chatflow/Agent/Human Input 的有效与无效测试
+  fixture，并接入 GitHub Actions。
+- 增加规模化生成方法：先规划，再独立生成节点，集中确定性装配/修复，最后
+  做结构校验；失败时只重试局部组件。
 
 ## V2.0 更新说明
 
@@ -97,7 +114,7 @@ V2.0 的重点更进一步：不只是会填 YAML 字段，而是让 Agent 更�
 - 对照 Agent Skills specification 和 Anthropic 官方 skills 示例检查结构；
   安装脚本现在只复制 skill 真正需要的文件，保持安装目录更精简。
 
-V2.0 仍然默认面向官方 Dify app DSL `version: "0.6.0"`。公开样例用于学习
+V2.0 当时默认面向官方 Dify app DSL `version: "0.6.0"`。公开样例用于学习
 真实业务图结构和兼容性经验，不作为最新版 schema 的唯一权威来源。
 
 ## 安装
@@ -168,9 +185,10 @@ AI 就可以基于这个 skill 生成 YAML、节点、边、工具参数、数�
 
 ## 能做什么
 
-- 生成可导入 Dify 的 `workflow` 和 `advanced-chat` DSL YAML。
+- 生成可导入 Dify 的 `workflow`、`advanced-chat` 和 DSL 0.7.0 Agent App YAML。
 - 根据业务需求判断应该用 `workflow` 还是 `advanced-chat`，并选择合适节点组合。
-- 新文件默认面向官方 Dify app DSL `version: "0.6.0"`。
+- 面向 Dify 1.16.x 默认使用 `"0.7.0"`，面向 Dify 1.15.x 支持 `"0.6.0"`。
+- 支持 DSL 0.7.0 的可移植 Agent v2 节点和 package ref。
 - 编写常见节点：Start、End、Answer、LLM、Code、IF/ELSE、HTTP Request、
   Template Transform、Variable Aggregator、Assigner、Document Extractor、
   Question Classifier、Parameter Extractor、Knowledge Retrieval、Agent、
@@ -226,6 +244,12 @@ Use $dify-workflow-dsl to add a new Dify marketplace tool.
 
 ## 校验
 
+验证器需要 Python 3.10+ 和 PyYAML。开发环境先安装依赖：
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
 校验单个 DSL：
 
 ```bash
@@ -235,11 +259,18 @@ python3 scripts/validate_dsl.py path/to/workflow.yml
 批量校验多个 DSL：
 
 ```bash
-python3 scripts/validate_dsl.py examples/*.yml
+python3 scripts/validate_dsl.py tests/fixtures/valid/*.yml
 ```
 
-校验脚本会检查 YAML 解析、DSL version 类型、图连接、节点类型、LLM/tool
-基础字段、变量引用，以及 `INSERT` 字段列表尾逗号等常见 SQL 问题。
+指定目标版本或输出 CI 可读 JSON：
+
+```bash
+python3 scripts/validate_dsl.py --target-version 0.7.0 workflow.yml
+python3 scripts/validate_dsl.py --format json --strict workflow.yml
+```
+
+校验脚本覆盖 0.6.0/0.7.0 版本兼容、Agent package ref、图端点/可达性/循环、
+分支 handle、已知输出引用、Human Input、依赖覆盖、节点基础字段和 SQL 风险。
 
 ## 项目结构
 
@@ -251,17 +282,23 @@ python3 scripts/validate_dsl.py examples/*.yml
 ├── assets/
 │   └── wechat-official-account.jpg
 ├── install.sh
+├── requirements-dev.txt
 ├── references/
 │   ├── complete-examples.md
 │   ├── database-tools.md
 │   ├── dsl-structure.md
 │   ├── node-schemas.md
 │   ├── official-0.6-target.md
+│   ├── official-0.7-target.md
 │   ├── plugin-marketplace-tools.md
 │   ├── real-world-yml-study.md
 │   └── usecase-node-selection.md
 ├── scripts/
+│   ├── dify_dsl_validator/
 │   └── validate_dsl.py
+├── tests/
+│   ├── fixtures/
+│   └── test_validate_dsl.py
 ├── README.md
 └── README_CN.md
 ```
@@ -276,6 +313,7 @@ python3 scripts/validate_dsl.py examples/*.yml
 - `SKILL.md` 保持短小，只放核心流程和导航。
 - 复杂 schema、数据库模板、插件规则放到 `references/`。
 - 遇到重复导入错误，就把可自动检查的部分补进 `scripts/validate_dsl.py`。
+- 发布前运行 `python3 -m unittest discover -s tests -v`。
 - 每次更新后运行：
 
 ```bash

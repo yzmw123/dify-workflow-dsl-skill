@@ -1,0 +1,51 @@
+version: "0.7.0"
+kind: app
+app: {name: Approval, mode: workflow}
+dependencies: []
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  graph:
+    nodes:
+      - id: start
+        type: custom
+        data: {type: start, title: Start, variables: []}
+      - id: review
+        type: custom
+        data:
+          type: human-input
+          title: Review
+          delivery_methods:
+            - {id: webapp, type: webapp, enabled: true}
+          form_content: "Please review the generated result."
+          inputs:
+            - type: paragraph
+              output_variable_name: comment
+              default: {type: constant, selector: [], value: ""}
+          user_actions:
+            - {id: continue, title: Continue, button_style: primary}
+          timeout: 36
+          timeout_unit: hour
+      - id: end
+        type: custom
+        data:
+          type: end
+          title: End
+          outputs:
+            - variable: comment
+              value_selector: [review, comment]
+    edges:
+      - id: start-source-review-target
+        source: start
+        target: review
+        sourceHandle: source
+        targetHandle: target
+        type: custom
+        data: {sourceType: start, targetType: human-input}
+      - id: review-continue-end-target
+        source: review
+        target: end
+        sourceHandle: continue
+        targetHandle: target
+        type: custom
+        data: {sourceType: human-input, targetType: end}

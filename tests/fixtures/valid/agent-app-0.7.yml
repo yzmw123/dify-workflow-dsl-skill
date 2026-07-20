@@ -1,0 +1,17 @@
+version: "0.7.0"
+kind: app
+app: {name: Research Agent, mode: agent}
+agent: {package_ref: agent_1}
+agent_packages:
+  agent_1:
+    schema_version: 1
+    metadata:
+      name: Research Agent
+      description: ""
+      role: researcher
+      icon_type: emoji
+      icon: "🔎"
+      icon_background: "#E4FBCC"
+    soul: {schema_version: 1}
+    omitted_assets: []
+dependencies: []

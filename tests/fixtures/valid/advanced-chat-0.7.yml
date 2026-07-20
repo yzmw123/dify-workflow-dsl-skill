@@ -1,0 +1,45 @@
+version: "0.7.0"
+kind: app
+app:
+  name: Chat
+  mode: advanced-chat
+dependencies:
+  - current_identifier: null
+    type: marketplace
+    value:
+      marketplace_plugin_unique_identifier: langgenius/openai:0.3.0@test
+      version: null
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  graph:
+    nodes:
+      - id: start
+        type: custom
+        data: {type: start, title: Start, variables: []}
+      - id: llm
+        type: custom
+        data:
+          type: llm
+          title: Answer
+          model: {provider: langgenius/openai/openai, name: gpt-4.1-mini, mode: chat, completion_params: {}}
+          prompt_template:
+            - {role: user, text: "{{#sys.query#}}"}
+      - id: answer
+        type: custom
+        data: {type: answer, title: Answer, answer: "{{#llm.text#}}", variables: []}
+    edges:
+      - id: start-source-llm-target
+        source: start
+        target: llm
+        sourceHandle: source
+        targetHandle: target
+        type: custom
+        data: {sourceType: start, targetType: llm}
+      - id: llm-source-answer-target
+        source: llm
+        target: answer
+        sourceHandle: source
+        targetHandle: target
+        type: custom
+        data: {sourceType: llm, targetType: answer}
