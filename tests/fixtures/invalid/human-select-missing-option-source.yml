@@ -1,0 +1,25 @@
+version: "0.7.0"
+kind: app
+app: {name: Invalid Human Select, mode: workflow}
+dependencies: []
+workflow:
+  graph:
+    nodes:
+      - {id: start, type: custom, data: {type: start, title: Start, variables: []}}
+      - id: review
+        type: custom
+        data:
+          type: human-input
+          title: Review
+          delivery_methods: [{id: webapp, type: webapp, enabled: true}]
+          form_content: "Choose a value."
+          inputs:
+            - {type: select, output_variable_name: decision}
+          user_actions:
+            - {id: continue, title: Continue, button_style: primary}
+          timeout: 1
+          timeout_unit: hour
+      - {id: end, type: custom, data: {type: end, title: End, outputs: []}}
+    edges:
+      - {id: start-review, source: start, target: review, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: human-input}}
+      - {id: review-end, source: review, target: end, sourceHandle: continue, targetHandle: target, data: {sourceType: human-input, targetType: end}}

@@ -25,5 +25,7 @@ jobs:
         run: python -m pip install -r requirements-dev.txt
       - name: Run regression tests
         run: python -m unittest discover -s tests -v
-      - name: Validate supported examples
-        run: python scripts/validate_dsl.py tests/fixtures/valid/*.yml
+      - name: Validate DSL 0.7 examples strictly
+        run: python scripts/validate_dsl.py --strict --target-version 0.7.0 tests/fixtures/valid/*.yml
+      - name: Validate DSL 0.6 examples strictly
+        run: python scripts/validate_dsl.py --strict --target-version 0.6.0 tests/fixtures/valid-0.6/*.yml

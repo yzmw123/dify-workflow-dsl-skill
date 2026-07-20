@@ -259,7 +259,8 @@ python3 scripts/validate_dsl.py path/to/workflow.yml
 批量校验多个 DSL：
 
 ```bash
-python3 scripts/validate_dsl.py tests/fixtures/valid/*.yml
+python3 scripts/validate_dsl.py --strict --target-version 0.7.0 tests/fixtures/valid/*.yml
+python3 scripts/validate_dsl.py --strict --target-version 0.6.0 tests/fixtures/valid-0.6/*.yml
 ```
 
 指定目标版本或输出 CI 可读 JSON：
@@ -269,8 +270,10 @@ python3 scripts/validate_dsl.py --target-version 0.7.0 workflow.yml
 python3 scripts/validate_dsl.py --format json --strict workflow.yml
 ```
 
-校验脚本覆盖 0.6.0/0.7.0 版本兼容、Agent package ref、图端点/可达性/循环、
-分支 handle、已知输出引用、Human Input、依赖覆盖、节点基础字段和 SQL 风险。
+校验脚本覆盖 0.6.0/0.7.0 版本兼容、Agent package/job/output schema、图端点、
+可达性、循环、分支覆盖、iteration/loop 容器、嵌套 selector、模板节点 ID、
+Human Input、依赖覆盖、节点基础字段和 SQL 风险。任何可被 PyYAML 解析的输入
+都会返回结构化诊断；批量校验不会因单个文件的字段类型错误而中断。
 
 ## 项目结构
 

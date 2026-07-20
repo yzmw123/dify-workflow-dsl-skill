@@ -1,0 +1,21 @@
+version: "0.7.0"
+kind: app
+app: {name: Dangling Container, mode: workflow}
+dependencies: []
+workflow:
+  graph:
+    nodes:
+      - {id: start, type: custom, data: {type: start, title: Start, variables: []}}
+      - id: child
+        parentId: missing-iteration
+        type: custom
+        data:
+          type: code
+          title: Child
+          code_language: python3
+          code: "def main():\n    return {'result': 'ok'}\n"
+          outputs: {result: {type: string}}
+      - {id: end, type: custom, data: {type: end, title: End, outputs: []}}
+    edges:
+      - {id: start-child, source: start, target: child, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: code}}
+      - {id: child-end, source: child, target: end, sourceHandle: source, targetHandle: target, data: {sourceType: code, targetType: end}}

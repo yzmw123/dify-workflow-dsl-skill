@@ -1,0 +1,25 @@
+version: "0.7.0"
+kind: app
+app: {name: Invalid Assigner Value, mode: workflow}
+dependencies: []
+workflow:
+  conversation_variables:
+    - {name: target, value_type: string, value: ""}
+  graph:
+    nodes:
+      - {id: start, type: custom, data: {type: start, title: Start, variables: []}}
+      - id: assign
+        type: custom
+        data:
+          type: assigner
+          title: Assign
+          version: "2"
+          items:
+            - variable_selector: [conversation, target]
+              input_type: variable
+              operation: over-write
+              value: [missing-node, output]
+      - {id: end, type: custom, data: {type: end, title: End, outputs: []}}
+    edges:
+      - {id: start-assign, source: start, target: assign, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: assigner}}
+      - {id: assign-end, source: assign, target: end, sourceHandle: source, targetHandle: target, data: {sourceType: assigner, targetType: end}}

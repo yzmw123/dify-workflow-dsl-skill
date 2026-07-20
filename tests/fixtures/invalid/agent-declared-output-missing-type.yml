@@ -1,0 +1,36 @@
+version: "0.7.0"
+kind: app
+app: {name: Invalid Agent Output, mode: workflow}
+agent_packages:
+  agent_1:
+    schema_version: 1
+    metadata: {name: Worker}
+    soul: {schema_version: 1}
+    omitted_assets: []
+dependencies: []
+workflow:
+  graph:
+    nodes:
+      - {id: start, type: custom, data: {type: start, title: Start, variables: []}}
+      - id: worker
+        type: custom
+        data:
+          type: agent
+          title: Worker
+          version: "2"
+          agent_node_kind: dify_agent
+          agent_binding: {binding_type: inline_agent, package_ref: agent_1}
+          agent_job:
+            schema_version: 1
+            declared_outputs:
+              - {name: result}
+      - id: end
+        type: custom
+        data:
+          type: end
+          title: End
+          outputs:
+            - {variable: result, value_selector: [worker, result]}
+    edges:
+      - {id: start-worker, source: start, target: worker, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: agent}}
+      - {id: worker-end, source: worker, target: end, sourceHandle: source, targetHandle: target, data: {sourceType: agent, targetType: end}}

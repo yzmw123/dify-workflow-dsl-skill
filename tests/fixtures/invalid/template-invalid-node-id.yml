@@ -1,0 +1,31 @@
+version: "0.7.0"
+kind: app
+app: {name: Invalid Template Node ID, mode: advanced-chat}
+dependencies: []
+workflow:
+  graph:
+    nodes:
+      - id: start
+        type: custom
+        data:
+          type: start
+          title: Start
+          variables:
+            - {label: Input, variable: input_text, type: paragraph, required: true}
+      - id: template-node
+        type: custom
+        data:
+          type: template-transform
+          title: Template
+          template: "{{#start.input_text#}}"
+          variables:
+            - {variable: input_text, value_selector: [start, input_text]}
+      - id: answer
+        type: custom
+        data:
+          type: answer
+          title: Answer
+          answer: "{{#template-node.output#}}"
+    edges:
+      - {id: start-template, source: start, target: template-node, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: template-transform}}
+      - {id: template-answer, source: template-node, target: answer, sourceHandle: source, targetHandle: target, data: {sourceType: template-transform, targetType: answer}}

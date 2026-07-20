@@ -259,13 +259,14 @@ type: assigner
 items:
   - variable_selector: [conversation, Memory]
     input_type: variable
-    value_selector: ["1770000000001", output]
+    value: ["1770000000001", output]
     operation: over-write
 selected: false
 ```
 
 Some newer exports use `variable-assigner`; follow the target workspace export
-style if editing an existing file.
+style if editing an existing file. Assigner v2 stores the source selector in
+`items[].value`; `value_selector` is not the standard field in this shape.
 
 ## document-extractor
 
@@ -518,6 +519,12 @@ are identifiers with a 20-character maximum; timeout units are `hour` or `day`.
 Input types are `paragraph`, `select`, `file`, and `file-list`. Non-webapp
 delivery methods can contain workspace-specific config, so copy them from a
 target-workspace export.
+
+`select` inputs require `option_source` with `type: constant` plus a string-list
+`value`, or `type: variable` plus a selector of at least two strings. `file` and
+`file-list` inputs use `allowed_file_types`, `allowed_file_extensions`, and
+`allowed_file_upload_methods`; `custom` requires at least one extension, and
+upload methods are `local_file` or `remote_url`.
 
 ## trigger-schedule
 

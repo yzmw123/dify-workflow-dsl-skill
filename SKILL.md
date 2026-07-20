@@ -133,6 +133,12 @@ Load only what is needed:
   plugin/tool metadata rather than inventing it.
 - `provider_type` can be `builtin`, `api`, `workflow`, or `mcp`. Workspace-local
   Workflow/API/MCP identities may be non-portable.
+- Dify runtime interpolation restricts the node-id part of
+  `{{#node_id.field#}}` to 1-50 letters, numbers, or underscores even though
+  edge and array selectors can still reference IDs containing hyphens.
+- Accept both `["sys", "query"]` and Dify frontend system selectors such as
+  `[startNodeId, "sys.query"]`. Assigner v2 reads its source selector from
+  `items[].value`.
 - Never hardcode API keys, database passwords, webhook secrets, credential IDs,
   or private dataset IDs. Use authorization, environment variables, or explicit
   placeholders.
@@ -165,11 +171,16 @@ python3 scripts/validate_dsl.py --format json --strict workflow.yml
 
 # Run the maintained regression set
 python3 -m unittest discover -s tests -v
+
+# Strictly validate the maintained versioned fixtures
+python3 scripts/validate_dsl.py --strict --target-version 0.7.0 tests/fixtures/valid/*.yml
+python3 scripts/validate_dsl.py --strict --target-version 0.6.0 tests/fixtures/valid-0.6/*.yml
 ```
 
 The validator supports 0.6.0 and 0.7.0 and checks version/mode compatibility,
-Agent package refs, graph endpoints and reachability, cycles, branch handles,
-known outputs, Human Input schemas, dependencies, node basics, and SQL risks.
+strict Agent package/job/output schemas, graph endpoints and reachability,
+cycles, branch coverage, containers, nested selectors, runtime-compatible
+template IDs, Human Input schemas, dependencies, node basics, and SQL risks.
 
 If the user requests only review, report import blockers and behavioral defects
 first with precise locations. If asked to create or modify a DSL, write the YAML,

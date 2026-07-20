@@ -277,7 +277,8 @@ python3 scripts/validate_dsl.py path/to/workflow.yml
 Validate multiple DSL files:
 
 ```bash
-python3 scripts/validate_dsl.py tests/fixtures/valid/*.yml
+python3 scripts/validate_dsl.py --strict --target-version 0.7.0 tests/fixtures/valid/*.yml
+python3 scripts/validate_dsl.py --strict --target-version 0.6.0 tests/fixtures/valid-0.6/*.yml
 ```
 
 Enforce a version or produce CI-friendly JSON:
@@ -287,9 +288,11 @@ python3 scripts/validate_dsl.py --target-version 0.7.0 workflow.yml
 python3 scripts/validate_dsl.py --format json --strict workflow.yml
 ```
 
-The validator checks 0.6.0/0.7.0 version compatibility, Agent package refs,
-graph endpoints/reachability/cycles, branch handles, known output references,
-Human Input schemas, dependency coverage, node basics, and SQL risks.
+The validator checks 0.6.0/0.7.0 compatibility, strict Agent package/job/output
+schemas, graph endpoints/reachability/cycles, branch coverage, iteration/loop
+containers, nested selectors, runtime-compatible template node IDs, Human Input
+schemas, dependencies, node basics, and SQL risks. Every PyYAML-parseable input
+returns structured diagnostics, and one bad file cannot abort a batch.
 
 ## Project Structure
 

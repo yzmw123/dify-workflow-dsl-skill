@@ -1,0 +1,33 @@
+version: "0.7.0"
+kind: app
+app: {name: Duplicate Branch Handle, mode: workflow}
+dependencies: []
+workflow:
+  graph:
+    nodes:
+      - id: start
+        type: custom
+        data:
+          type: start
+          title: Start
+          variables:
+            - {label: Value, variable: value, type: paragraph, required: true}
+      - id: branch
+        type: custom
+        data:
+          type: if-else
+          title: Branch
+          cases:
+            - id: "true"
+              case_id: "true"
+              logical_operator: and
+              conditions:
+                - {variable_selector: [start, value], comparison_operator: is, value: yes, varType: string}
+      - {id: yes_one, type: custom, data: {type: end, title: Yes One, outputs: []}}
+      - {id: yes_two, type: custom, data: {type: end, title: Yes Two, outputs: []}}
+      - {id: "no", type: custom, data: {type: end, title: No, outputs: []}}
+    edges:
+      - {id: start-branch, source: start, target: branch, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: if-else}}
+      - {id: branch-yes-one, source: branch, target: yes_one, sourceHandle: "true", targetHandle: target, data: {sourceType: if-else, targetType: end}}
+      - {id: branch-yes-two, source: branch, target: yes_two, sourceHandle: "true", targetHandle: target, data: {sourceType: if-else, targetType: end}}
+      - {id: branch-no, source: branch, target: "no", sourceHandle: "false", targetHandle: target, data: {sourceType: if-else, targetType: end}}

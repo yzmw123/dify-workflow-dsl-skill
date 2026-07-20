@@ -290,9 +290,11 @@ variable_selector: ["sys", query]
 query: ["1770000000001", text]
 ```
 
-Some exported DSLs use dotted system selectors in arrays, for example
-`["sys.query"]`. Prefer the two-element selector (`["sys", "query"]`) for new
-files unless matching an existing export.
+Some Dify 1.16 frontend node configs encode Chatflow system variables as
+`[startNodeId, "sys.query"]`; the equivalent canonical system selector is
+`["sys", "query"]`. Some older exports use one-element dotted arrays such as
+`["sys.query"]`. Prefer the canonical two-element selector for new files unless
+matching an existing export.
 
 ## Workflow Variables
 

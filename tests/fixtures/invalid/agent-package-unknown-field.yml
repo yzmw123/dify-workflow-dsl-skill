@@ -1,0 +1,12 @@
+version: "0.7.0"
+kind: app
+app: {name: Agent With Extra Field, mode: agent}
+agent: {package_ref: agent_1}
+agent_packages:
+  agent_1:
+    schema_version: 1
+    metadata: {name: Agent}
+    soul: {schema_version: 1}
+    omitted_assets: []
+    unexpected: true
+dependencies: []

@@ -1,0 +1,26 @@
+version: "0.7.0"
+kind: app
+app: {name: Empty Iteration, mode: workflow}
+dependencies: []
+workflow:
+  graph:
+    nodes:
+      - {id: start, type: custom, data: {type: start, title: Start, variables: []}}
+      - id: iterate
+        type: custom
+        data:
+          type: iteration
+          title: Iterate
+          start_node_id: iterate_start
+      - id: iterate_start
+        parentId: iterate
+        type: custom-iteration-start
+        data:
+          type: iteration-start
+          title: Iteration Start
+          isInIteration: true
+          iteration_id: iterate
+      - {id: end, type: custom, data: {type: end, title: End, outputs: []}}
+    edges:
+      - {id: start-iterate, source: start, target: iterate, sourceHandle: source, targetHandle: target, data: {sourceType: start, targetType: iteration}}
+      - {id: iterate-end, source: iterate, target: end, sourceHandle: source, targetHandle: target, data: {sourceType: iteration, targetType: end}}

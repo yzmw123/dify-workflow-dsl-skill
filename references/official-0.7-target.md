@@ -93,6 +93,8 @@ dependencies: []
 `agent.package_ref` must resolve to an `agent_packages` key. `metadata.name` is
 required and has a 255-character maximum. `description` and `role` default to
 empty strings. `soul` is an Agent Soul config with `schema_version: 1`.
+Agent package, metadata, Soul top-level, and omitted-asset objects reject unknown
+fields according to their Dify 1.16 Pydantic schemas.
 
 Portable exports deliberately sanitize sensitive or workspace-bound values:
 
@@ -149,9 +151,14 @@ Rules:
   export keeps the original binding type (`inline_agent` or `roster_agent`) and
   replaces workspace IDs with `package_ref`.
 - `agent_job.schema_version` is 1.
+- `agent_job` rejects unknown top-level fields. Its supported fields are
+  `schema_version`, `mode`, `workflow_prompt`, `previous_node_output_refs`,
+  `declared_outputs`, `human_contacts`, and `metadata`.
 - `previous_node_output_refs[].selector` uses the normal Dify selector shape.
 - An empty `declared_outputs` means the runtime defaults to `text`, `files`, and
   `json`. If non-empty, downstream selectors must use those declared names.
+- Every declared output requires an identifier-like `name` and one of `string`,
+  `number`, `object`, `array`, `boolean`, or `file` as `type`.
 - The corresponding graph edge metadata still uses `sourceType: agent`.
 
 ## Human Input
@@ -182,6 +189,11 @@ timeout_unit: day
 Human Input rules from the backend/frontend schemas:
 
 - `inputs` support `paragraph`, `select`, `file`, and `file-list`.
+- `select` requires `option_source`; variable defaults and option sources use
+  selectors with at least two string elements.
+- File inputs accept `image`, `document`, `audio`, `video`, or `custom`;
+  `custom` requires extensions, upload methods are `local_file`/`remote_url`,
+  and `file-list.number_limits` is non-negative.
 - Every `output_variable_name` must be unique and becomes a node output. Human
   Input also exposes `__action_id`, `__action_value`, and `__rendered_content`;
   `{{#$output.<name>#}}` form fields expose `<name>`.
@@ -243,6 +255,10 @@ phase instead of regenerating the entire workflow.
 - A normal Workflow has reachable `end`; Chatflow has reachable `answer`.
 - No accidental cycles exist.
 - Branch handles resolve to cases/classes/actions.
+- Missing declared branch connections and duplicate reuse of one branch handle
+  are behavior-risk warnings; invalid handles remain errors.
+- Iteration/loop `start_node_id`, `parentId`, child membership, and container
+  references resolve consistently; containers are not empty.
 - Selectors resolve to known nodes and known static outputs.
 - All Agent package refs resolve and package schema versions are 1.
 - Plugin dependencies cover graph nodes and Agent packages.
