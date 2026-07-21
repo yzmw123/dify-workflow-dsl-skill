@@ -6,6 +6,14 @@
 [中文说明](./README_CN.md) · [10 Dify 1.16 examples](./examples/dify-1.16.0) ·
 [Evaluation report](./references/dify-1.16-evaluation.md)
 
+> [!IMPORTANT]
+> **Now supports Dify 1.16.0 and App DSL `0.7.0`, including Agent v2
+> workflow nodes.** Dify 1.16.0 is the latest official release as of
+> 2026-07-21; this repository has been checked against its tagged source and
+> real Console import path. See the
+> [Dify v1.16.0 release](https://github.com/langgenius/dify/releases/tag/1.16.0)
+> and the [evaluation evidence](./references/dify-1.16-evaluation.md).
+
 ## 🎯 Version Strategy
 
 > [!IMPORTANT]
@@ -19,9 +27,24 @@
 | **Dify 1.16.x** | **`"0.7.0"`** | Default for new generation |
 | Dify 1.15.x | `"0.6.0"` | Compatibility generation and validation |
 
-Do not downgrade a 0.7.0 file by changing only `version`. Dify 1.15.x correctly
-reports a compatibility warning for 0.7.0 imports; generate a real 0.6.0 variant
-instead.
+If Dify reports that the DSL version is incompatible, first check the target
+workspace version. A 0.7.0 file cannot be made compatible with Dify 1.15.x by
+ignoring the warning or changing only `version`:
+
+- upgrade the workspace to Dify 1.16.0 or later; or
+- ask the agent to generate a real DSL 0.6.0 workflow for Dify 1.15.x.
+
+The skill supports an explicit target version. For example:
+
+```text
+Use $dify-workflow-dsl to create this workflow for Dify 1.15.0 using DSL 0.6.0.
+```
+
+Validate the result against the same target:
+
+```bash
+python3 scripts/validate_dsl.py --strict --target-version 0.6.0 workflow.yml
+```
 
 > [!TIP]
 > **New apps default to `workflow`.** Use or recommend `advanced-chat` only when
@@ -75,9 +98,9 @@ the LLM `context` object required by Dify. See the
 
 ### Workflow Previews
 
-The two largest maintained graph examples each contain six nodes. These canvas
-previews are rendered from the checked-in DSL layouts; click an image to inspect
-the source workflow.
+The two largest maintained graph examples each contain six nodes. Both files
+were imported through the real Dify 1.16.0 Console, then captured from Dify's
+Workflow canvas. Click an image to inspect the imported source workflow.
 
 #### Priority Routing
 
@@ -98,6 +121,12 @@ The skill supports both 0.7.0 Agent forms:
 Agent packages are portable, but secrets and workspace-bound assets are not.
 After import, review warnings and reconnect model credentials, tools, contacts,
 skills, files, and other omitted assets.
+
+The following screenshot is the checked-in Agent v2 example after a real import
+into Dify 1.16.0. The selected node and its inline Agent configuration panel are
+rendered by Dify itself.
+
+[![Agent v2 workflow node and inline configuration panel in Dify 1.16.0](./assets/workflow-previews/09-agent-v2-workflow.png)](./examples/dify-1.16.0/09-agent-v2-workflow.yml)
 
 ## 📦 Install
 

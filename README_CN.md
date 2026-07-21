@@ -5,6 +5,13 @@
 [English](./README.md) · [10 个 Dify 1.16 示例](./examples/dify-1.16.0) ·
 [评估报告](./references/dify-1.16-evaluation.md)
 
+> [!IMPORTANT]
+> **现已支持 Dify 1.16.0 与 App DSL `0.7.0`，包括 Agent v2 工作流节点。**
+> 截至 2026-07-21，Dify 1.16.0 是官方最新版本；本仓库已使用对应 tag 源码和
+> 真实 Console 导入路径核验。参见
+> [Dify v1.16.0 发布说明](https://github.com/langgenius/dify/releases/tag/1.16.0)
+> 与[实测证据](./references/dify-1.16-evaluation.md)。
+
 ## 🎯 版本策略
 
 > [!IMPORTANT]
@@ -18,8 +25,23 @@
 | **Dify 1.16.x** | **`"0.7.0"`** | 新建工作流的默认目标 |
 | Dify 1.15.x | `"0.6.0"` | 兼容生成与校验 |
 
-不要只修改 `version` 来降级 0.7.0 文件。Dify 1.15.x 导入 0.7.0 时出现版本
-不兼容提示是正常行为，应单独生成符合 0.6.0 结构的版本。
+如果 Dify 提示 DSL 版本不兼容，请先确认目标工作区版本。Dify 1.15.x 不能靠
+忽略提示或只修改 `version` 来兼容 0.7.0 文件，应选择以下方式之一：
+
+- 将工作区升级到 Dify 1.16.0 或更高版本；
+- 明确让 Agent 为 Dify 1.15.x 生成真正的 DSL 0.6.0 工作流。
+
+本 Skill 支持显式指定目标版本，例如：
+
+```text
+使用 $dify-workflow-dsl 为 Dify 1.15.0 创建这个工作流，目标 DSL 版本为 0.6.0。
+```
+
+校验时使用同一个目标版本：
+
+```bash
+python3 scripts/validate_dsl.py --strict --target-version 0.6.0 workflow.yml
+```
 
 > [!TIP]
 > **新建应用默认使用 `workflow`。** 只有需求明确需要多轮记忆、
@@ -71,8 +93,9 @@
 
 ### 工作流效果预览
 
-当前维护的示例中，下面两个场景的图节点数并列最多，均为 6 个。预览图按照
-仓库中实际 DSL 的节点、连线和布局渲染；点击图片可直接查看源工作流。
+当前维护的示例中，下面两个场景的图节点数并列最多，均为 6 个。两个文件都已
+通过真实 Dify 1.16.0 Console 导入，图片直接截取自 Dify Workflow 画布；点击
+图片可查看对应源工作流。
 
 #### 工单优先级分流
 
@@ -92,6 +115,11 @@ Skill 支持两种 0.7.0 Agent 形态：
 
 Agent package 可以移植，但密钥和工作区绑定资产不会完整打包。导入后需要检查
 警告，并重新连接模型凭据、工具、联系人、Skills、文件和其他 omitted assets。
+
+下图是仓库中的 Agent v2 示例真实导入 Dify 1.16.0 后的界面。被选中的 Agent
+节点及右侧“内联配置”面板均由 Dify 实际渲染。
+
+[![Dify 1.16.0 中的 Agent v2 工作流节点与内联配置面板](./assets/workflow-previews/09-agent-v2-workflow.png)](./examples/dify-1.16.0/09-agent-v2-workflow.yml)
 
 ## 📦 安装
 

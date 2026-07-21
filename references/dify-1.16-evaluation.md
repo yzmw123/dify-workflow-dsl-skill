@@ -31,6 +31,12 @@ Agent-package, variable, and dependency state through Dify's normal service
 path. The app-created event signal is suppressed so unrelated trigger/plugin
 side effects do not require a plugin daemon.
 
+The Console UI gate starts the exact Dify 1.16.0 source and imports three
+representative files through the browser: priority routing, array iteration,
+and the Agent v2 workflow. Dify rendered their real graph canvases, including
+the Iteration container and the selected Agent v2 inline-configuration panel.
+The resulting screenshots are checked into `assets/workflow-previews/`.
+
 ## Scenario Results
 
 | # | Scenario | Important nodes/features | Local strict | Dify models | DB import |
@@ -81,12 +87,12 @@ python scripts/validate_with_dify_source.py \
 
 The following checks still require a configured Dify 1.16.x workspace:
 
-- authenticated upload through the Console UI/API and a save/re-export round trip;
+- save/re-export round trips for the full ten-scenario suite;
 - plugin installation and exact marketplace identifier availability;
 - model credentials and model availability;
 - Agent credentials, contacts, skills, files, and other omitted assets;
 - execution semantics, generated files, external APIs, and Human Input delivery;
-- UI rendering.
+- UI rendering for workspace-bound plugins, models, and omitted assets.
 
 The evaluation intentionally does not call models, install plugins, access
 external APIs, or execute workflow side effects.
