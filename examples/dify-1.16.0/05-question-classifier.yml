@@ -1,0 +1,129 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "客服问题分类"
+  description: "将用户问题分为售前、售后或其他，并返回对应指引"
+  icon: "🧭"
+  icon_type: emoji
+  icon_background: "#FEF3C7"
+  mode: advanced-chat
+  use_icon_as_answer_icon: false
+dependencies:
+  - current_identifier: null
+    type: marketplace
+    value:
+      marketplace_plugin_unique_identifier: langgenius/openai:0.2.6@e2665624a156f52160927bceac9e169bd7e5ae6b936ae82575e14c90af390e6e
+      version: null
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    opening_statement: "请描述你遇到的问题。"
+  graph:
+    nodes:
+      - id: classifier_start
+        type: custom
+        data:
+          type: start
+          title: "开始"
+          variables: []
+        position: {x: 40, y: 300}
+        positionAbsolute: {x: 40, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 54
+      - id: classify
+        type: custom
+        data:
+          type: question-classifier
+          title: "问题分类"
+          model:
+            provider: langgenius/openai/openai
+            name: gpt-4.1-mini
+            mode: chat
+            completion_params:
+              temperature: 0
+          query_variable_selector: [sys, query]
+          classes:
+            - {id: presales, name: "售前咨询"}
+            - {id: support, name: "售后支持"}
+            - {id: other, name: "其他问题"}
+          instruction: "只能选择最匹配的一类；无法判断时选择其他问题。"
+          vision:
+            enabled: false
+        position: {x: 360, y: 300}
+        positionAbsolute: {x: 360, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 150
+      - id: presales_answer
+        type: custom
+        data:
+          type: answer
+          title: "售前回复"
+          answer: "这是售前咨询。请补充使用场景、预计人数和上线时间。"
+          variables: []
+        position: {x: 700, y: 120}
+        positionAbsolute: {x: 700, y: 120}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+      - id: support_answer
+        type: custom
+        data:
+          type: answer
+          title: "售后回复"
+          answer: "这是售后支持问题。请补充报错信息、复现步骤和环境版本。"
+          variables: []
+        position: {x: 700, y: 300}
+        positionAbsolute: {x: 700, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+      - id: other_answer
+        type: custom
+        data:
+          type: answer
+          title: "其他回复"
+          answer: "已记录你的问题，请补充期望结果和相关背景。"
+          variables: []
+        position: {x: 700, y: 480}
+        positionAbsolute: {x: 700, y: 480}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+    edges:
+      - id: classifier_start-source-classify-target
+        source: classifier_start
+        sourceHandle: source
+        target: classify
+        targetHandle: target
+        type: custom
+        data: {sourceType: start, targetType: question-classifier, isInIteration: false, isInLoop: false}
+      - id: classify-presales-presales_answer-target
+        source: classify
+        sourceHandle: presales
+        target: presales_answer
+        targetHandle: target
+        type: custom
+        data: {sourceType: question-classifier, targetType: answer, isInIteration: false, isInLoop: false}
+      - id: classify-support-support_answer-target
+        source: classify
+        sourceHandle: support
+        target: support_answer
+        targetHandle: target
+        type: custom
+        data: {sourceType: question-classifier, targetType: answer, isInIteration: false, isInLoop: false}
+      - id: classify-other-other_answer-target
+        source: classify
+        sourceHandle: other
+        target: other_answer
+        targetHandle: target
+        type: custom
+        data: {sourceType: question-classifier, targetType: answer, isInIteration: false, isInLoop: false}
+    viewport: {x: 0, y: 0, zoom: 0.75}

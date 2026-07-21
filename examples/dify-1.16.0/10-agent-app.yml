@@ -1,0 +1,45 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "独立研究 Agent"
+  description: "Dify 1.16 Agent App 示例"
+  icon: "🧠"
+  icon_type: emoji
+  icon_background: "#F3E8FF"
+  mode: agent
+  use_icon_as_answer_icon: false
+agent:
+  package_ref: standalone_agent
+agent_packages:
+  standalone_agent:
+    schema_version: 1
+    metadata:
+      name: "独立研究 Agent"
+      description: "回答研究问题并标明信息边界"
+      role: research_assistant
+      icon_type: emoji
+      icon: "🧠"
+      icon_background: "#F3E8FF"
+    soul:
+      schema_version: 1
+      prompt:
+        system_prompt: "你是研究助理。优先给出结论，明确证据不足和需要核实的内容。"
+      model:
+        plugin_id: langgenius/openai
+        model_provider: langgenius/openai/openai
+        model: gpt-4.1-mini
+        credential_ref: null
+        model_settings:
+          temperature: 0.2
+      app_features:
+        opening_statement: "请告诉我你的研究问题。"
+        suggested_questions:
+          - "比较两个方案的关键差异"
+          - "整理一份调研提纲"
+    omitted_assets: []
+dependencies:
+  - current_identifier: null
+    type: marketplace
+    value:
+      marketplace_plugin_unique_identifier: langgenius/openai:0.2.6@e2665624a156f52160927bceac9e169bd7e5ae6b936ae82575e14c90af390e6e
+      version: null

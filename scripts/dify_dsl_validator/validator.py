@@ -1108,16 +1108,29 @@ class Validator:
         elif node_type == "llm":
             model = data.get("model")
             if not isinstance(model, dict) or not model.get("provider") or not model.get("name"):
-                self.report.warn(
+                self.report.error(
                     "node.llm.model",
-                    f"LLM node {title!r} has no explicit model provider/name and will depend on workspace defaults.",
+                    f"LLM node {title!r} requires an explicit model provider and name.",
                     f"{location}.model",
+                )
+            elif not isinstance(model.get("mode"), str) or not model.get("mode"):
+                self.report.error(
+                    "node.llm.model",
+                    f"LLM node {title!r} requires model.mode.",
+                    f"{location}.model.mode",
                 )
             if not isinstance(data.get("prompt_template"), list):
                 self.report.error(
                     "node.llm.prompt",
                     "LLM prompt_template must be a list.",
                     f"{location}.prompt_template",
+                )
+            context = data.get("context")
+            if not isinstance(context, dict) or not isinstance(context.get("enabled"), bool):
+                self.report.error(
+                    "node.llm.context",
+                    "LLM context must be a mapping with a boolean enabled field.",
+                    f"{location}.context",
                 )
             outputs = {"text", "reasoning_content", "usage", "finish_reason", "structured_output"}
 

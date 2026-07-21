@@ -1,18 +1,11 @@
-version: "0.6.0"
+version: "0.7.0"
 kind: app
-app:
-  name: Translate
-  mode: workflow
-  icon: "🌐"
-  icon_type: emoji
-  icon_background: "#E4FBCC"
-  description: "Translate input text."
-  use_icon_as_answer_icon: false
+app: {name: Missing LLM Context, mode: workflow}
 dependencies:
   - current_identifier: null
     type: marketplace
     value:
-      marketplace_plugin_unique_identifier: langgenius/tongyi:0.1.36@test
+      marketplace_plugin_unique_identifier: langgenius/openai:0.2.6@test
       version: null
 workflow:
   conversation_variables: []
@@ -21,51 +14,38 @@ workflow:
     nodes:
       - id: start
         type: custom
-        data:
-          type: start
-          title: Start
-          variables:
-            - label: Input
-              variable: input_text
-              type: paragraph
-              required: true
-              max_length: 4096
+        data: {type: start, title: Start, variables: []}
       - id: llm
         type: custom
         data:
           type: llm
-          title: Translate
+          title: LLM
           model:
-            provider: langgenius/tongyi/tongyi
-            name: qwen-plus
+            provider: langgenius/openai/openai
+            name: gpt-4.1-mini
             mode: chat
             completion_params: {}
           prompt_template:
-            - role: user
-              text: "Translate: {{#start.input_text#}}"
-          context:
-            enabled: false
-            variable_selector: []
+            - {role: user, text: "Hello"}
       - id: end
         type: custom
         data:
           type: end
           title: End
           outputs:
-            - variable: result
-              value_selector: [llm, text]
+            - {variable: result, value_selector: [llm, text]}
     edges:
       - id: start-source-llm-target
         source: start
-        target: llm
         sourceHandle: source
+        target: llm
         targetHandle: target
         type: custom
         data: {sourceType: start, targetType: llm}
       - id: llm-source-end-target
         source: llm
-        target: end
         sourceHandle: source
+        target: end
         targetHandle: target
         type: custom
         data: {sourceType: llm, targetType: end}

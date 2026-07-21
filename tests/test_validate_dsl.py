@@ -94,6 +94,7 @@ class ValidatorFixtureTests(unittest.TestCase):
             "disconnected.yml": {"graph.unreachable-node", "graph.unreachable-terminal"},
             "empty-iteration.yml": {"container.empty"},
             "human-select-missing-option-source.yml": {"node.human-input.option-source"},
+            "llm-missing-context.yml": {"node.llm.context"},
             "missing-dependency.yml": {"dependency.missing"},
             "template-invalid-node-id.yml": {"reference.template-node-id"},
             "unknown-output.yml": {"reference.unknown-output"},
@@ -104,6 +105,15 @@ class ValidatorFixtureTests(unittest.TestCase):
                 report = validate_path(FIXTURES / "invalid" / name)
                 actual = {diagnostic.code for diagnostic in report.errors}
                 self.assertTrue(codes <= actual, report.format_text())
+
+    def test_dify_1_16_scenarios_have_no_diagnostics(self) -> None:
+        paths = sorted((ROOT / "examples" / "dify-1.16.0").glob("*.yml"))
+        self.assertEqual(10, len(paths))
+        for path in paths:
+            with self.subTest(path=path.name):
+                report = validate_path(path, target_version="0.7.0")
+                self.assertEqual([], report.errors, report.format_text())
+                self.assertEqual([], report.warnings, report.format_text())
 
     def test_sql_risks_are_reported_as_warnings(self) -> None:
         report = validate_path(FIXTURES / "warnings" / "unsafe-sql.yml")

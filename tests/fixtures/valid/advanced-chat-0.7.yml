@@ -25,6 +25,9 @@ workflow:
           model: {provider: langgenius/openai/openai, name: gpt-4.1-mini, mode: chat, completion_params: {}}
           prompt_template:
             - {role: user, text: "{{#sys.query#}}"}
+          context:
+            enabled: false
+            variable_selector: []
       - id: answer
         type: custom
         data: {type: answer, title: Answer, answer: "{{#llm.text#}}", variables: []}

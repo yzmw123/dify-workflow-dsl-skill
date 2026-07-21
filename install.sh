@@ -101,6 +101,7 @@ copy_skill() {
   local items=(
     "SKILL.md"
     "agents"
+    "examples"
     "references"
     "scripts"
   )

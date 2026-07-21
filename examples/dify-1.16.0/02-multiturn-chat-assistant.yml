@@ -1,0 +1,102 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "多轮对话助手"
+  description: "使用 Chatflow 系统变量和窗口记忆回答问题"
+  icon: "💬"
+  icon_type: emoji
+  icon_background: "#D1E9FF"
+  mode: advanced-chat
+  use_icon_as_answer_icon: false
+dependencies:
+  - current_identifier: null
+    type: marketplace
+    value:
+      marketplace_plugin_unique_identifier: langgenius/openai:0.2.6@e2665624a156f52160927bceac9e169bd7e5ae6b936ae82575e14c90af390e6e
+      version: null
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    opening_statement: "你好，请告诉我你想解决的问题。"
+    suggested_questions:
+      - "帮我梳理这段需求"
+      - "给我三个可执行建议"
+  graph:
+    nodes:
+      - id: chat_start
+        type: custom
+        data:
+          type: start
+          title: "开始"
+          variables: []
+        position: {x: 40, y: 240}
+        positionAbsolute: {x: 40, y: 240}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 54
+      - id: chat_llm
+        type: custom
+        data:
+          type: llm
+          title: "对话模型"
+          model:
+            provider: langgenius/openai/openai
+            name: gpt-4.1-mini
+            mode: chat
+            completion_params:
+              temperature: 0.4
+          prompt_template:
+            - id: chat-system
+              role: system
+              text: "你是清晰、可靠的中文助理。先回答结论，再给必要说明。"
+            - id: chat-user
+              role: user
+              text: "{{#sys.query#}}"
+          context:
+            enabled: false
+            variable_selector: []
+          memory:
+            query_prompt_template: "{{#sys.query#}}"
+            role_prefix: {assistant: "", user: ""}
+            window:
+              enabled: true
+              size: 20
+          vision:
+            enabled: false
+        position: {x: 360, y: 240}
+        positionAbsolute: {x: 360, y: 240}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 110
+      - id: answer
+        type: custom
+        data:
+          type: answer
+          title: "回复"
+          answer: "{{#chat_llm.text#}}"
+          variables: []
+        position: {x: 680, y: 240}
+        positionAbsolute: {x: 680, y: 240}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+    edges:
+      - id: chat_start-source-chat_llm-target
+        source: chat_start
+        sourceHandle: source
+        target: chat_llm
+        targetHandle: target
+        type: custom
+        data: {sourceType: start, targetType: llm, isInIteration: false, isInLoop: false}
+      - id: chat_llm-source-answer-target
+        source: chat_llm
+        sourceHandle: source
+        target: answer
+        targetHandle: target
+        type: custom
+        data: {sourceType: llm, targetType: answer, isInIteration: false, isInLoop: false}
+    viewport: {x: 0, y: 0, zoom: 0.8}

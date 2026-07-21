@@ -1,0 +1,166 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "批量条目格式化"
+  description: "将多行文本拆分为数组，并在 Iteration 中逐条格式化"
+  icon: "🔁"
+  icon_type: emoji
+  icon_background: "#DBEAFE"
+  mode: workflow
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features: {}
+  graph:
+    nodes:
+      - id: iteration_input
+        type: custom
+        data:
+          type: start
+          title: "输入条目"
+          variables:
+            - label: "每行一个条目"
+              variable: items_text
+              type: paragraph
+              required: true
+              max_length: 20000
+        position: {x: 40, y: 280}
+        positionAbsolute: {x: 40, y: 280}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+      - id: split_items
+        type: custom
+        data:
+          type: code
+          title: "拆分数组"
+          code_language: python3
+          code: |
+            def main(text: str) -> dict:
+                items = [line.strip() for line in text.splitlines() if line.strip()]
+                return {"items": items}
+          variables:
+            - variable: text
+              value_selector: [iteration_input, items_text]
+          outputs:
+            items:
+              type: array[string]
+              children: null
+        position: {x: 350, y: 280}
+        positionAbsolute: {x: 350, y: 280}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 80
+      - id: batch
+        type: custom
+        data:
+          type: iteration
+          title: "逐条格式化"
+          iterator_selector: [split_items, items]
+          iterator_input_type: array[string]
+          output_selector: [format_item, output]
+          output_type: array[string]
+          is_parallel: false
+          parallel_nums: 10
+          error_handle_mode: terminated
+          start_node_id: batch_start
+          width: 420
+          height: 190
+        position: {x: 660, y: 250}
+        positionAbsolute: {x: 660, y: 250}
+        sourcePosition: right
+        targetPosition: left
+        width: 420
+        height: 190
+        zIndex: 1
+      - id: batch_start
+        parentId: batch
+        type: custom-iteration-start
+        draggable: false
+        selectable: false
+        data:
+          type: iteration-start
+          title: ""
+          isInIteration: true
+        position: {x: 24, y: 72}
+        positionAbsolute: {x: 684, y: 322}
+        sourcePosition: right
+        targetPosition: left
+        width: 44
+        height: 48
+        zIndex: 1002
+      - id: format_item
+        parentId: batch
+        type: custom
+        data:
+          type: template-transform
+          title: "格式化条目"
+          isInIteration: true
+          isInLoop: false
+          iteration_id: batch
+          variables:
+            - variable: item
+              value_selector: [batch, item]
+          template: "- {{ item }}"
+        position: {x: 128, y: 68}
+        positionAbsolute: {x: 788, y: 318}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 64
+        zIndex: 1002
+      - id: iteration_end
+        type: custom
+        data:
+          type: end
+          title: "输出列表"
+          outputs:
+            - variable: formatted_items
+              value_selector: [batch, output]
+              value_type: array[string]
+        position: {x: 1140, y: 280}
+        positionAbsolute: {x: 1140, y: 280}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+    edges:
+      - id: iteration_input-source-split_items-target
+        source: iteration_input
+        sourceHandle: source
+        target: split_items
+        targetHandle: target
+        type: custom
+        data: {sourceType: start, targetType: code, isInIteration: false, isInLoop: false}
+      - id: split_items-source-batch-target
+        source: split_items
+        sourceHandle: source
+        target: batch
+        targetHandle: target
+        type: custom
+        data: {sourceType: code, targetType: iteration, isInIteration: false, isInLoop: false}
+      - id: batch_start-source-format_item-target
+        source: batch_start
+        sourceHandle: source
+        target: format_item
+        targetHandle: target
+        type: custom
+        zIndex: 1002
+        data:
+          sourceType: iteration-start
+          targetType: template-transform
+          isInIteration: true
+          isInLoop: false
+          iteration_id: batch
+      - id: batch-source-iteration_end-target
+        source: batch
+        sourceHandle: source
+        target: iteration_end
+        targetHandle: target
+        type: custom
+        data: {sourceType: iteration, targetType: end, isInIteration: false, isInLoop: false}
+    viewport: {x: 0, y: 0, zoom: 0.72}

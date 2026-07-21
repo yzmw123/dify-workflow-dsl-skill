@@ -1,0 +1,143 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "人工审批"
+  description: "收集审批意见、风险等级和附件，并按动作分支返回"
+  icon: "✅"
+  icon_type: emoji
+  icon_background: "#DCFCE7"
+  mode: workflow
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features: {}
+  graph:
+    nodes:
+      - id: approval_start
+        type: custom
+        data:
+          type: start
+          title: "提交审批"
+          variables:
+            - label: "审批内容"
+              variable: proposal
+              type: paragraph
+              required: true
+              max_length: 10000
+        position: {x: 40, y: 300}
+        positionAbsolute: {x: 40, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+      - id: human_review
+        type: custom
+        data:
+          type: human-input
+          title: "人工复核"
+          delivery_methods:
+            - id: webapp
+              type: webapp
+              enabled: true
+          form_content: "请复核以下内容：\n\n{{#approval_start.proposal#}}"
+          inputs:
+            - type: paragraph
+              output_variable_name: comment
+              default:
+                type: constant
+                selector: []
+                value: ""
+            - type: select
+              output_variable_name: risk_level
+              option_source:
+                type: constant
+                selector: []
+                value: [低, 中, 高]
+            - type: file-list
+              output_variable_name: evidence
+              allowed_file_types: [document, image]
+              allowed_file_extensions: []
+              allowed_file_upload_methods: [local_file]
+              number_limits: 3
+          user_actions:
+            - id: approve
+              title: "通过"
+              button_style: primary
+            - id: reject
+              title: "退回"
+              button_style: default
+          timeout: 24
+          timeout_unit: hour
+        position: {x: 370, y: 300}
+        positionAbsolute: {x: 370, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 280
+        height: 210
+      - id: approved_end
+        type: custom
+        data:
+          type: end
+          title: "审批通过"
+          outputs:
+            - variable: decision
+              value_selector: [human_review, __action_id]
+              value_type: string
+            - variable: comment
+              value_selector: [human_review, comment]
+              value_type: string
+            - variable: risk_level
+              value_selector: [human_review, risk_level]
+              value_type: string
+        position: {x: 730, y: 190}
+        positionAbsolute: {x: 730, y: 190}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 120
+      - id: rejected_end
+        type: custom
+        data:
+          type: end
+          title: "审批退回"
+          outputs:
+            - variable: decision
+              value_selector: [human_review, __action_id]
+              value_type: string
+            - variable: comment
+              value_selector: [human_review, comment]
+              value_type: string
+            - variable: risk_level
+              value_selector: [human_review, risk_level]
+              value_type: string
+        position: {x: 730, y: 430}
+        positionAbsolute: {x: 730, y: 430}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 120
+    edges:
+      - id: approval_start-source-human_review-target
+        source: approval_start
+        sourceHandle: source
+        target: human_review
+        targetHandle: target
+        type: custom
+        data: {sourceType: start, targetType: human-input, isInIteration: false, isInLoop: false}
+      - id: human_review-approve-approved_end-target
+        source: human_review
+        sourceHandle: approve
+        target: approved_end
+        targetHandle: target
+        type: custom
+        data: {sourceType: human-input, targetType: end, isInIteration: false, isInLoop: false}
+      - id: human_review-reject-rejected_end-target
+        source: human_review
+        sourceHandle: reject
+        target: rejected_end
+        targetHandle: target
+        type: custom
+        data: {sourceType: human-input, targetType: end, isInIteration: false, isInLoop: false}
+    viewport: {x: 0, y: 0, zoom: 0.78}

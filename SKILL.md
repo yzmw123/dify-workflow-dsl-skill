@@ -34,8 +34,13 @@ plugin/tool fields.
    plugin. Preserve exact exported identifiers.
 6. Write stable string IDs and connect edges with existing endpoints, matching
    `sourceType`/`targetType`, and valid branch `sourceHandle` values.
-7. Run `python3 scripts/validate_dsl.py --target-version <version> <file.yml>`.
-   Fix all errors. Explain warnings that remain intentionally.
+7. Run `python3 scripts/validate_dsl.py --strict --target-version <version> <file.yml>`.
+   Fix all errors and warnings unless a warning is an intentional, documented
+   behavior risk.
+8. When a matching Dify source environment is available, run
+   `scripts/validate_with_dify_source.py` before claiming source compatibility.
+   This uses Dify's own node and Agent models; it does not replace a real
+   workspace import and execution test.
 
 ## Version Policy
 
@@ -78,6 +83,9 @@ unknown and import compatibility matters, state the 1.16.x assumption.
   `timeout`, and `timeout_unit`. Each outgoing edge uses a `user_actions[].id` as
   `sourceHandle` (or `__timeout` for timeout); input names and the special
   `__action_id`, `__action_value`, and `__rendered_content` fields are outputs.
+- LLM nodes require `model`, `prompt_template`, and `context`. Even when context
+  retrieval is disabled, include `context: {enabled: false,
+  variable_selector: []}` because Dify's node model requires the object.
 
 ## Scalable Generation
 
@@ -112,6 +120,10 @@ Load only what is needed:
 - `references/plugin-marketplace-tools.md`: rare/dynamic plugin schema workflow.
 - `references/real-world-yml-study.md`: legacy and real-world design evidence.
 - `references/complete-examples.md`: complete 0.7.0 graph examples.
+- `references/dify-1.16-evaluation.md`: ten-scenario source-backed evaluation,
+  results, reproduction command, and remaining workspace-only checks.
+- `examples/dify-1.16.0/`: maintained import-oriented examples covering core
+  graph, container, Human Input, Agent v2, and Agent App scenarios.
 
 ## Authoring Rules
 
@@ -175,6 +187,14 @@ python3 -m unittest discover -s tests -v
 # Strictly validate the maintained versioned fixtures
 python3 scripts/validate_dsl.py --strict --target-version 0.7.0 tests/fixtures/valid/*.yml
 python3 scripts/validate_dsl.py --strict --target-version 0.6.0 tests/fixtures/valid-0.6/*.yml
+
+# Strictly validate the ten Dify 1.16 scenarios
+python3 scripts/validate_dsl.py --strict --target-version 0.7.0 examples/dify-1.16.0/*.yml
+
+# Optional: run Dify 1.16's own node and Agent models
+python scripts/validate_with_dify_source.py \
+  --dify-source /path/to/dify-1.16.0 \
+  examples/dify-1.16.0/*.yml
 ```
 
 The validator supports 0.6.0 and 0.7.0 and checks version/mode compatibility,
