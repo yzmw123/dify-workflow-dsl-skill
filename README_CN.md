@@ -2,27 +2,52 @@
 
 > 让 AI 编程 Agent 生成、修复、审查、迁移和校验 Dify App DSL。
 
-[English](./README.md) · [10 个 Dify 1.16 示例](./examples/dify-1.16.0) ·
-[评估报告](./references/dify-1.16-evaluation.md)
+[English](./README.md) · [4 个 Dify 1.18 示例](./examples/dify-1.18.0) ·
+[10 个 Dify 1.16 示例](./examples/dify-1.16.0) ·
+[1.18 评估报告](./references/dify-1.18-evaluation.md)
 
-> [!IMPORTANT]
-> **现已支持 Dify 1.16.0 与 App DSL `0.7.0`，包括 Agent v2 工作流节点。**
-> 截至 2026-07-21，Dify 1.16.0 是官方最新版本；本仓库已使用对应 tag 源码和
-> 真实 Console 导入路径核验。参见
-> [Dify v1.16.0 发布说明](https://github.com/langgenius/dify/releases/tag/1.16.0)
-> 与[实测证据](./references/dify-1.16-evaluation.md)。
+> **默认面向 Dify 1.18，保留 Dify 1.15/1.16 兼容。** 1.16 和 1.18 均使用
+> DSL `0.7.0`，校验时请另外指定 `--dify-version`。
+> [1.18 适配说明](./references/dify-1.18-target.md) ·
+> [本次验证记录](./references/dify-1.18-evaluation.md)
+
+## 本次更新 — 2026-10-30
+
+- **适配 Dify 1.18，保留旧版兼容。** 使用 `--dify-version` 选择 1.18、1.16
+  或 1.15；DSL 0.7.0 默认按 1.18 校验，DSL 0.6.0 默认按 1.15 校验。
+- **补充 Agent 与知识检索规则。** 支持 Agent 系统输出与路由、工作区技能、
+  KnowledgeFS 绑定、`knowledge-retrieval-v2` 和可移植 Site 设置，新增 4 个
+  对应示例。
+- **完善依赖安装。** `run_validator.py` 自动准备并复用独立虚拟环境，
+  `install.sh --setup` 可在安装时提前准备；支持离线安装、JSON 输出，并保留
+  原有校验入口。
+
+兼容性与安装修复：
+
+- 正确区分同样使用 `version: "2"` 的旧插件 Agent 与可移植 Dify Agent，
+  并在 1.18 下接受缺失资源的 `file_id: null` 占位值。
+- 拦截关闭 Agent 路由后残留的无效路由连线。
+- 自动恢复中断环境中缺失的 pip，防止强制安装覆盖安装源文件。
+- 畸形节点类型、应用模式返回诊断而不中断批量校验；源码校验使用 Dify 的
+  生产节点解析规则。
+
+**验证结果：** 54 项本地回归测试通过；14 个维护示例和 2 个额外兼容场景通过
+Dify 1.18.0 源码校验。14 个示例均通过真实数据库导入并持久化，其中 2 个示例
+产生 3 条预期的工作区资源重绑定警告。模型执行、界面保存后重新导出仍需在目标
+工作区验证。完整证据、复现命令和验证边界见[验证记录](./references/dify-1.18-evaluation.md)。
 
 ## 🎯 版本策略
 
 > [!IMPORTANT]
-> **Dify 1.16.x → App DSL `"0.7.0"`**
+> **Dify 1.18.x → App DSL `"0.7.0"`**
 >
 > 新工作流默认使用这个版本，并支持可移植 **Agent App** 和
 > **Agent v2 工作流节点**。
 
 | 目标工作区 | DSL 版本 | 策略 |
 | --- | --- | --- |
-| **Dify 1.16.x** | **`"0.7.0"`** | 新建工作流的默认目标 |
+| **Dify 1.18.x** | **`"0.7.0"`** | 新建工作流的默认目标 |
+| Dify 1.16.x | `"0.7.0"` | 保留旧版字段和输出规则 |
 | Dify 1.15.x | `"0.6.0"` | 兼容生成与校验 |
 
 如果 Dify 提示 DSL 版本不兼容，请先确认目标工作区版本。Dify 1.15.x 不能靠
@@ -40,7 +65,7 @@
 校验时使用同一个目标版本：
 
 ```bash
-python3 scripts/validate_dsl.py --strict --target-version 0.6.0 workflow.yml
+python3 scripts/run_validator.py --strict --dify-version 1.15 workflow.yml
 ```
 
 > [!TIP]
@@ -126,7 +151,7 @@ Agent package 可以移植，但密钥和工作区绑定资产不会完整打包
 ```bash
 git clone https://github.com/yzmw123/dify-workflow-dsl-skill.git
 cd dify-workflow-dsl-skill
-bash install.sh --platform codex
+bash install.sh --platform codex --setup
 ```
 
 支持的平台：
@@ -147,7 +172,7 @@ bash install.sh --platform all
 生成工作流：
 
 ```text
-使用 $dify-workflow-dsl 创建一个 Dify 1.16 工作流：
+使用 $dify-workflow-dsl 创建一个 Dify 1.18 工作流：
 读取上传的 Excel，把表格转换为 Markdown，交给大模型分析，并返回 Markdown
 表格和分析报告。
 ```
@@ -171,35 +196,41 @@ bash install.sh --platform all
 
 ## ✅ 校验
 
-安装开发依赖：
+需要 Python 3.10+。首次运行自动安装 PyYAML 到独立缓存环境，后续复用；
+无需向系统 Python 安装依赖。`install.sh --setup` 可以提前完成准备。
 
 ```bash
-python -m pip install -r requirements-dev.txt
+python3 scripts/run_validator.py --strict --dify-version 1.18 workflow.yml
+python3 scripts/run_validator.py --format json --strict --dify-version 1.18 workflow.yml
+python3 scripts/run_validator.py --strict --dify-version 1.16 old-workflow.yml
+python3 scripts/run_validator.py --strict --dify-version 1.15 old-0.6.yml
 ```
 
-运行本地校验和测试：
+运行环境位置可用 `DIFY_DSL_VENV_DIR` 指定。首次准备需要访问 Python 包源；
+离线机器请先安装本地 wheel，再设 `DIFY_DSL_OFFLINE=1`。
+详见[依赖与离线运行](./references/runtime.md)。原 `validate_dsl.py` 入口保留，
+适合已有依赖的 Python 环境。
+
+开发回归使用独立环境：
 
 ```bash
-python3 scripts/validate_dsl.py --strict --target-version 0.7.0 workflow.yml
-python3 scripts/validate_dsl.py --format json --strict workflow.yml
-python3 -m unittest discover -s tests -v
-python3 scripts/validate_dsl.py \
-  --strict \
-  --target-version 0.7.0 \
-  examples/dify-1.16.0/*.yml
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -m unittest discover -s tests -v
 ```
 
-如果本机有 Dify 1.16 的 Python 3.12 API 环境：
+源码验证需使用对应 Dify 的 API 环境（1.18 为 Python 3.13；1.16 为 Python 3.12）：
 
 ```bash
-python scripts/validate_with_dify_source.py \
-  --dify-source /path/to/dify-1.16.0 \
-  examples/dify-1.16.0/*.yml
+/path/to/dify-1.18.0/api/.venv/bin/python scripts/validate_with_dify_source.py \
+  --dify-source /path/to/dify-1.18.0 --dify-version 1.18.0 \
+  examples/dify-1.16.0/*.yml examples/dify-1.18.0/*.yml
 ```
 
-本地验证器覆盖版本/模式兼容、图端点与可达性、循环、分支覆盖、容器拓扑、
-selector、模板节点 ID、Human Input、Agent schema、依赖和常见 SQL 风险。
-任何可被 PyYAML 解析的输入都会返回结构化诊断；单个坏文件不会中断批量校验。
+新增规则覆盖 Agent 路由及分支引用、保留输出名、工作区技能、KnowledgeFS
+绑定和检索节点；旧版图校验继续保留。`.ifpkg` 请通过 Dify 导入，或从 Dify
+显式导出 YAML 后进行本地校验。官方 `difyctl` 可用于在线应用管理，本 skill
+负责 YAML 生成与静态校验。详见[1.18 说明](./references/dify-1.18-target.md)。
 
 ## 🗂️ 仓库结构
 
@@ -207,9 +238,11 @@ selector、模板节点 ID、Human Input、Agent schema、依赖和常见 SQL �
 .
 ├── SKILL.md                         # Agent 核心执行规则
 ├── examples/dify-1.16.0/            # 10 个 DSL 0.7.0 场景
+├── examples/dify-1.18.0/            # 4 个 Dify 1.18 场景
 ├── references/                      # 源码核对后的 schema 与模式
 ├── scripts/
 │   ├── dify_dsl_validator/          # 可复用验证器包
+│   ├── run_validator.py             # 独立依赖环境引导入口
 │   ├── validate_dsl.py              # 本地确定性校验 CLI
 │   └── validate_with_dify_source.py # Dify 源码兼容校验
 ├── tests/                           # fixture 与回归测试
@@ -221,7 +254,7 @@ selector、模板节点 ID、Human Input、Agent schema、依赖和常见 SQL �
 ## ⚠️ 校验边界
 
 静态校验不能证明工作流在所有工作区都能直接运行。以下内容仍需在真实 Dify
-1.16.x 工作区导入和执行：
+目标版本工作区导入和执行：
 
 - 已安装的插件版本和动态工具 schema；
 - 模型是否可用以及模型凭据；

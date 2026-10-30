@@ -10,9 +10,11 @@ from typing import Any, Iterable, Iterator
 import yaml
 
 from .models import Report
+from .modern import validate_workspace_skills, validate_spaces, validate_routes, route_handles, validate_retrieval, validate_site
 
 
 SUPPORTED_VERSIONS = ("0.6.0", "0.7.0")
+DIFY_DSL_VERSIONS = {"1.15": "0.6.0", "1.16": "0.7.0", "1.18": "0.7.0"}
 GRAPH_MODES = {"workflow", "advanced-chat"}
 BASE_MODES = {"workflow", "advanced-chat", "chat", "completion", "agent-chat"}
 MODES_BY_VERSION = {
@@ -260,10 +262,14 @@ def _declared_output_name(item: Any) -> str | None:
 
 
 class Validator:
-    def __init__(self, document: Any, path: Path, target_version: str | None = None) -> None:
+    def __init__(self, document: Any, path: Path, target_version: str | None = None,
+                 dify_version: str | None = None) -> None:
         self.document = document
         self.report = Report(path)
         self.target_version = target_version
+        self.requested_dify_version = dify_version
+        self.dify_version = "1.18"
+        self.modern = True
         self.version: str | None = None
         self.mode: str | None = None
         self.workflow: dict[str, Any] = {}
@@ -303,6 +309,23 @@ class Validator:
 
     def _validate_header(self) -> None:
         raw_version = self.document.get("version")
+        requested = self.requested_dify_version
+        if requested is None:
+            self.dify_version = "1.15" if raw_version == "0.6.0" else "1.18"
+        else:
+            match = re.fullmatch(r"(1\.(?:15|16|18))(?:\.\d+)?", requested) if isinstance(requested, str) else None
+            if match is None:
+                self.report.error("version.dify-unsupported", "Supported Dify targets: 1.15, 1.16, 1.18.", "version")
+            else:
+                self.dify_version = match.group(1)
+        self.modern = self.dify_version == "1.18"
+        self.report.dify_version = self.dify_version
+        expected = DIFY_DSL_VERSIONS[self.dify_version]
+        if self.requested_dify_version is not None and raw_version != expected:
+            self.report.error("version.dify-mismatch", f"Dify {self.dify_version} profile requires DSL {expected}.", "version")
+        if self.modern and "site" in self.document:
+            validate_site(self.document["site"], self.report)
+
         if not isinstance(raw_version, str):
             self.report.error(
                 "version.type",
@@ -370,12 +393,14 @@ class Validator:
             if not isinstance(raw_package, dict):
                 self.report.error("agent.package-type", "Agent package must be a mapping.", location)
                 continue
-            for field in _unexpected_fields(raw_package, AGENT_PACKAGE_FIELDS):
+            for field in _unexpected_fields(raw_package, AGENT_PACKAGE_FIELDS | ({"workspace_skills"} if self.modern else set())):
                 self.report.error(
                     "agent.package-extra-field",
-                    f"Agent package field {field!r} is not allowed by Dify 1.16.",
+                    f"Agent package field {field!r} is not allowed by Dify {self.dify_version}.",
                     f"{location}.{field}",
                 )
+            if self.modern and "workspace_skills" in raw_package:
+                validate_workspace_skills(raw_package["workspace_skills"], self.report, f"{location}.workspace_skills")
             schema_version = raw_package.get("schema_version", 1)
             if not isinstance(schema_version, int) or isinstance(schema_version, bool) or schema_version != 1:
                 self.report.error(
@@ -394,7 +419,7 @@ class Validator:
                 for field in _unexpected_fields(metadata, AGENT_METADATA_FIELDS):
                     self.report.error(
                         "agent.package-extra-field",
-                        f"Agent package metadata field {field!r} is not allowed by Dify 1.16.",
+                        f"Agent package metadata field {field!r} is not allowed by Dify {self.dify_version}.",
                         f"{location}.metadata.{field}",
                     )
                 name = metadata.get("name")
@@ -445,7 +470,7 @@ class Validator:
                     for field in _unexpected_fields(asset, AGENT_OMITTED_ASSET_FIELDS):
                         self.report.error(
                             "agent.package-extra-field",
-                            f"Omitted asset field {field!r} is not allowed by Dify 1.16.",
+                            f"Omitted asset field {field!r} is not allowed by Dify {self.dify_version}.",
                             f"{asset_path}.{field}",
                         )
                     kind = asset.get("kind")
@@ -478,10 +503,10 @@ class Validator:
                             )
 
     def _validate_agent_soul(self, soul: dict[str, Any], location: str) -> None:
-        for field in _unexpected_fields(soul, AGENT_SOUL_FIELDS):
+        for field in _unexpected_fields(soul, AGENT_SOUL_FIELDS - ({"files"} if self.modern else set())):
             self.report.error(
                 "agent.soul-extra-field",
-                f"AgentSoulConfig field {field!r} is not allowed by Dify 1.16.",
+                f"AgentSoulConfig field {field!r} is not allowed by Dify {self.dify_version}.",
                 f"{location}.{field}",
             )
         schema_version = soul.get("schema_version", 1)
@@ -583,12 +608,14 @@ class Validator:
             )
 
     def _validate_agent_soul_knowledge(self, knowledge: dict[str, Any], location: str) -> None:
-        for field in _unexpected_fields(knowledge, AGENT_SOUL_KNOWLEDGE_FIELDS):
+        for field in _unexpected_fields(knowledge, AGENT_SOUL_KNOWLEDGE_FIELDS | ({"spaces"} if self.modern else set())):
             self.report.error(
                 "agent.soul-extra-field",
-                f"Agent soul knowledge field {field!r} is not allowed by Dify 1.16.",
+                f"Agent soul knowledge field {field!r} is not allowed by Dify {self.dify_version}.",
                 f"{location}.{field}",
             )
+        if self.modern:
+            validate_spaces(knowledge, self.report, location)
         sets = knowledge.get("sets", [])
         if not isinstance(sets, list):
             self.report.error(
@@ -612,7 +639,7 @@ class Validator:
             for field in _unexpected_fields(item, AGENT_KNOWLEDGE_SET_FIELDS):
                 self.report.error(
                     "agent.soul-extra-field",
-                    f"Agent knowledge set field {field!r} is not allowed by Dify 1.16.",
+                    f"Agent knowledge set field {field!r} is not allowed by Dify {self.dify_version}.",
                     f"{item_path}.{field}",
                 )
             for field in ("id", "name"):
@@ -652,7 +679,7 @@ class Validator:
                 for field in _unexpected_fields(metadata_filtering, AGENT_KNOWLEDGE_METADATA_FIELDS):
                     self.report.error(
                         "agent.soul-extra-field",
-                        f"Agent knowledge metadata_filtering field {field!r} is not allowed by Dify 1.16.",
+                        f"Agent knowledge metadata_filtering field {field!r} is not allowed by Dify {self.dify_version}.",
                         f"{item_path}.metadata_filtering.{field}",
                     )
                 mode = metadata_filtering.get("mode", "disabled")
@@ -705,7 +732,7 @@ class Validator:
             for field in _unexpected_fields(dataset, AGENT_KNOWLEDGE_DATASET_FIELDS):
                 self.report.error(
                     "agent.soul-extra-field",
-                    f"Agent knowledge dataset field {field!r} is not allowed by Dify 1.16.",
+                    f"Agent knowledge dataset field {field!r} is not allowed by Dify {self.dify_version}.",
                     f"{item_path}.{field}",
                 )
             dataset_id = dataset.get("id")
@@ -753,7 +780,7 @@ class Validator:
         for field in _unexpected_fields(value, AGENT_KNOWLEDGE_QUERY_FIELDS):
             self.report.error(
                 "agent.soul-extra-field",
-                f"Agent knowledge query field {field!r} is not allowed by Dify 1.16.",
+                f"Agent knowledge query field {field!r} is not allowed by Dify {self.dify_version}.",
                 f"{location}.{field}",
             )
         mode = value.get("mode")
@@ -782,7 +809,7 @@ class Validator:
         for field in _unexpected_fields(value, AGENT_KNOWLEDGE_RETRIEVAL_FIELDS):
             self.report.error(
                 "agent.soul-extra-field",
-                f"Agent knowledge retrieval field {field!r} is not allowed by Dify 1.16.",
+                f"Agent knowledge retrieval field {field!r} is not allowed by Dify {self.dify_version}.",
                 f"{location}.{field}",
             )
         mode = value.get("mode")
@@ -866,7 +893,7 @@ class Validator:
         for field in _unexpected_fields(value, allowed_fields):
             self.report.error(
                 "agent.soul-extra-field",
-                f"Agent knowledge model field {field!r} is not allowed by Dify 1.16.",
+                f"Agent knowledge model field {field!r} is not allowed by Dify {self.dify_version}.",
                 f"{location}.{field}",
             )
         for field in required_fields:
@@ -909,7 +936,7 @@ class Validator:
             for field in _unexpected_fields(item, allowed_fields):
                 self.report.error(
                     "agent.soul-extra-field",
-                    f"Agent config {kind} field {field!r} is not allowed by Dify 1.16.",
+                    f"Agent config {kind} field {field!r} is not allowed by Dify {self.dify_version}.",
                     f"{item_path}.{field}",
                 )
             name = item.get("name")
@@ -940,6 +967,9 @@ class Validator:
                     f"{item_path}.file_kind",
                 )
             file_id = item.get("file_id", "")
+            # Dify 1.18 normalizes the null placeholder in early portable exports.
+            if self.modern and item.get("is_missing") is True and file_id is None:
+                file_id = ""
             if not isinstance(file_id, str) or len(file_id) > 255:
                 self.report.error(
                     "agent.soul-field-type",
@@ -1210,6 +1240,11 @@ class Validator:
             outputs = {"body", "status_code", "headers", "files"}
         elif node_type == "knowledge-retrieval":
             outputs = {"result"}
+        elif node_type == "knowledge-retrieval-v2":
+            if not self.modern:
+                self.report.error("version.feature-knowledge-v2", "Knowledge Retrieval v2 requires Dify 1.18.", location)
+            validate_retrieval(data, self.report, location)
+            outputs = {"result"}
         elif node_type == "document-extractor":
             outputs = {"text"}
         elif node_type == "list-operator":
@@ -1449,10 +1484,9 @@ class Validator:
                 )
 
     def _validate_agent_node(self, data: dict[str, Any], location: str) -> set[str] | None:
-        is_v2 = (
-            any(key in data for key in ("agent_node_kind", "agent_binding", "agent_job"))
-            or data.get("version") == "2"
-        )
+        # Legacy strategy plugins also use version "2" for parameter encoding.
+        # Retain portable-field detection to report incomplete Dify Agent nodes.
+        is_v2 = any(key in data for key in ("agent_node_kind", "agent_binding", "agent_job"))
         if not is_v2:
             for key in ("agent_strategy_provider_name", "agent_strategy_name", "agent_parameters"):
                 if data.get(key) in (None, ""):
@@ -1491,10 +1525,10 @@ class Validator:
         if not isinstance(job, dict):
             self.report.error("node.agent-v2.job", "Agent v2 needs an agent_job mapping.", f"{location}.agent_job")
             return {"text", "files", "json"}
-        for field in _unexpected_fields(job, AGENT_JOB_FIELDS):
+        for field in _unexpected_fields(job, AGENT_JOB_FIELDS | ({"output_routes"} if self.modern else set())):
             self.report.error(
                 "node.agent-v2.job-extra-field",
-                f"WorkflowNodeJobConfig field {field!r} is not allowed by Dify 1.16.",
+                f"WorkflowNodeJobConfig field {field!r} is not allowed by Dify {self.dify_version}.",
                 f"{location}.agent_job.{field}",
             )
         schema_version = job.get("schema_version", 1)
@@ -1538,6 +1572,10 @@ class Validator:
                 "agent_job.metadata must be a mapping.",
                 f"{location}.agent_job.metadata",
             )
+        if self.modern:
+            validate_routes(data, job, self.report, location)
+        elif "agent_output_routes" in data:
+            self.report.error("version.feature-agent-routes", "Agent output routes require Dify 1.18.", location)
         declared = _list(job.get("declared_outputs"))
         names: set[str] = set()
         for index, item in enumerate(declared):
@@ -1547,6 +1585,8 @@ class Validator:
             )
             if name:
                 names.add(name)
+        if self.modern:
+            return names | {"text"} | ({"switch"} if route_handles(data) is not None else set())
         return names if declared else {"text", "files", "json"}
 
     def _validate_declared_output(self, item: Any, location: str, *, child: bool = False) -> str | None:
@@ -1561,7 +1601,7 @@ class Validator:
         for field in _unexpected_fields(item, allowed_fields):
             self.report.error(
                 "node.agent-v2.declared-output-extra-field",
-                f"Declared output field {field!r} is not allowed by Dify 1.16.",
+                f"Declared output field {field!r} is not allowed by Dify {self.dify_version}.",
                 f"{location}.{field}",
             )
 
@@ -1581,6 +1621,8 @@ class Validator:
         else:
             valid_name = name
 
+        if self.modern and not child and valid_name in {"text", "switch", "_session"}:
+            self.report.error("node.agent-v2.reserved-output", f"{valid_name!r} is a system-reserved output name.", f"{location}.name")
         output_id = item.get("id")
         if not child and output_id is not None and not isinstance(output_id, str):
             self.report.error(
@@ -1624,7 +1666,7 @@ class Validator:
                 for field in _unexpected_fields(file_config, DECLARED_OUTPUT_FILE_FIELDS):
                     self.report.error(
                         "node.agent-v2.declared-output-extra-field",
-                        f"Declared output file field {field!r} is not allowed by Dify 1.16.",
+                        f"Declared output file field {field!r} is not allowed by Dify {self.dify_version}.",
                         f"{location}.file.{field}",
                     )
                 for field in DECLARED_OUTPUT_FILE_FIELDS:
@@ -1698,7 +1740,7 @@ class Validator:
         for field in _unexpected_fields(check, DECLARED_OUTPUT_CHECK_FIELDS):
             self.report.error(
                 "node.agent-v2.declared-output-extra-field",
-                f"Declared output check field {field!r} is not allowed by Dify 1.16.",
+                f"Declared output check field {field!r} is not allowed by Dify {self.dify_version}.",
                 f"{location}.{field}",
             )
         enabled = check.get("enabled", False)
@@ -1771,7 +1813,7 @@ class Validator:
         for field in _unexpected_fields(strategy, DECLARED_OUTPUT_FAILURE_FIELDS):
             self.report.error(
                 "node.agent-v2.declared-output-extra-field",
-                f"Declared output failure_strategy field {field!r} is not allowed by Dify 1.16.",
+                f"Declared output failure_strategy field {field!r} is not allowed by Dify {self.dify_version}.",
                 f"{location}.{field}",
             )
         retry = strategy.get("retry", {})
@@ -1785,7 +1827,7 @@ class Validator:
             for field in _unexpected_fields(retry, DECLARED_OUTPUT_RETRY_FIELDS):
                 self.report.error(
                     "node.agent-v2.declared-output-extra-field",
-                    f"Declared output retry field {field!r} is not allowed by Dify 1.16.",
+                    f"Declared output retry field {field!r} is not allowed by Dify {self.dify_version}.",
                     f"{location}.retry.{field}",
                 )
             enabled = retry.get("enabled", False)
@@ -1881,7 +1923,7 @@ class Validator:
         for field in _unexpected_fields(item, DECLARED_ARRAY_ITEM_FIELDS):
             self.report.error(
                 "node.agent-v2.declared-output-extra-field",
-                f"Declared array_item field {field!r} is not allowed by Dify 1.16.",
+                f"Declared array_item field {field!r} is not allowed by Dify {self.dify_version}.",
                 f"{location}.{field}",
             )
         item_type = item.get("type")
@@ -2051,6 +2093,12 @@ class Validator:
             # The 1.16 frontend/export uses __timeout while the backend HITL
             # adapter currently names the selected runtime handle __timeout__.
             allowed.update({"__timeout", "__timeout__"})
+        elif node_type == "agent" and self.modern and data.get("agent_node_kind") == "dify_agent":
+            allowed = route_handles(data)
+            if allowed is None:
+                allowed = {"source"}
+            if data.get("error_strategy") == "fail-branch":
+                allowed = allowed | {"fail-branch"}
         if allowed is not None and _handle_id(edge.get("sourceHandle")) not in allowed:
             self.report.error(
                 "edge.invalid-branch-handle",
@@ -2075,6 +2123,8 @@ class Validator:
                 for item in _list(data.get("classes"))
                 if isinstance(item, dict) and item.get("id") is not None
             }
+        if node_type == "agent" and self.modern:
+            return route_handles(data)
         if node_type == "human-input":
             handles = {
                 _handle_id(item["id"])
@@ -2604,7 +2654,7 @@ class Validator:
                 candidates.extend((data.get("plugin_id"), data.get("provider_id")))
             elif node_type in TRIGGER_TYPES:
                 candidates.extend((data.get("plugin_id"), data.get("provider_id")))
-            elif node_type in {"agent", "knowledge-retrieval", "knowledge-index", "datasource"}:
+            elif node_type in {"agent", "knowledge-retrieval", "knowledge-retrieval-v2", "knowledge-index", "datasource"}:
                 for _, key, value in _walk(data):
                     if key in {"provider", "provider_id", "plugin_id", "agent_strategy_provider_name"}:
                         candidates.append(value)
@@ -2639,10 +2689,11 @@ def validate_document(
     *,
     path: Path | str = Path("<memory>"),
     target_version: str | None = None,
+    dify_version: str | None = None,
 ) -> Report:
     """Validate an already parsed YAML document."""
 
-    validator = Validator(document, Path(path), target_version=target_version)
+    validator = Validator(document, Path(path), target_version=target_version, dify_version=dify_version)
     try:
         return validator.run()
     except Exception as exc:  # Defensive boundary: user YAML must never crash callers.
@@ -2654,14 +2705,19 @@ def validate_document(
         return validator.report
 
 
-def validate_path(path: Path | str, target_version: str | None = None) -> Report:
+def validate_path(path: Path | str, target_version: str | None = None, *, dify_version: str | None = None) -> Report:
     """Load and validate one YAML file without raising for user-facing errors."""
 
     resolved_path = Path(path)
     report = Report(resolved_path)
     try:
+        with resolved_path.open("rb") as stream:
+            prefix = stream.read(4)
+        if resolved_path.suffix.lower() == ".ifpkg" or prefix == b"PK\x03\x04":
+            report.error("file.package", "This validator accepts YAML. Export YAML explicitly from Dify or validate the .ifpkg with Dify import.", str(resolved_path))
+            return report
         source = resolved_path.read_text(encoding="utf-8")
-    except OSError as exc:
+    except (OSError, UnicodeError) as exc:
         report.error("file.read", f"Could not read file: {exc}", str(resolved_path))
         return report
     try:
@@ -2669,7 +2725,7 @@ def validate_path(path: Path | str, target_version: str | None = None) -> Report
     except (yaml.YAMLError, TypeError, ValueError) as exc:
         report.error("yaml.parse", f"YAML parse failed: {exc}", str(resolved_path))
         return report
-    return validate_document(document, path=resolved_path, target_version=target_version)
+    return validate_document(document, path=resolved_path, target_version=target_version, dify_version=dify_version)
 
 
 # Backward-compatible library name used by early adopters of the script.

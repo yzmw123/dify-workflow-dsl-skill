@@ -36,6 +36,7 @@ class Report:
 
     path: Path
     diagnostics: list[Diagnostic] = field(default_factory=list)
+    dify_version: str | None = None
 
     @property
     def errors(self) -> list[Diagnostic]:
@@ -62,6 +63,7 @@ class Report:
             status = "valid"
         return {
             "path": str(self.path),
+            "dify_version": self.dify_version,
             "status": status,
             "summary": {"errors": error_count, "warnings": warning_count},
             "diagnostics": [item.as_dict() for item in self.diagnostics],

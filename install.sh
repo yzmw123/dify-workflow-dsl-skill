@@ -2,12 +2,13 @@
 set -euo pipefail
 
 SKILL_NAME="dify-workflow-dsl"
-SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 
 PLATFORM=""
 TARGET_DIR=""
 FORCE=0
 DRY_RUN=0
+SETUP_RUNTIME=0
 
 usage() {
   cat <<'USAGE'
@@ -27,10 +28,12 @@ Options:
   --target-dir <dir>  Override install directory. Not supported with --platform all.
   --force             Overwrite managed files in the target directory.
   --dry-run           Print what would happen without copying files.
+  --setup             Prepare the isolated Python validator runtime after copying.
   -h, --help          Show this help.
 
 Environment overrides:
   CODEX_HOME, CLAUDE_HOME, OPENCLAW_HOME, HERMES_HOME, OPENCODE_CONFIG_DIR
+  DIFY_DSL_PYTHON (default: python3), DIFY_DSL_VENV_DIR, DIFY_DSL_OFFLINE
 USAGE
 }
 
@@ -50,6 +53,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --dry-run)
       DRY_RUN=1
+      shift
+      ;;
+    --setup)
+      SETUP_RUNTIME=1
       shift
       ;;
     -h|--help)
@@ -104,6 +111,7 @@ copy_skill() {
     "examples"
     "references"
     "scripts"
+    "requirements.txt"
   )
 
   echo "Installing $SKILL_NAME for $platform"
@@ -116,6 +124,17 @@ copy_skill() {
   fi
 
   mkdir -p "$target"
+  target="$(cd "$target" && pwd -P)"
+  if [[ "$target" == / || "$SOURCE_DIR" == "$target" || "$SOURCE_DIR" == "$target/"* ]]; then
+    echo "Install target must not be the source directory or one of its parents." >&2
+    exit 1
+  fi
+  for item in "${items[@]}"; do
+    if [[ "$target" == "$SOURCE_DIR/$item" || "$target" == "$SOURCE_DIR/$item/"* ]]; then
+      echo "Install target must not be inside a managed source directory: $item." >&2
+      exit 1
+    fi
+  done
 
   if [[ "$FORCE" -eq 1 ]]; then
     for item in "${items[@]}"; do
@@ -133,6 +152,10 @@ copy_skill() {
     fi
   done
 
+  if [[ "$SETUP_RUNTIME" -eq 1 ]]; then
+    "${DIFY_DSL_PYTHON:-python3}" "$target/scripts/run_validator.py" --setup
+  fi
+  echo "Validate: python3 \"$target/scripts/run_validator.py\" --dify-version 1.18 --strict <file.yml>"
   echo "Installed. Restart or reload your agent if it does not pick up new skills automatically."
 }
 

@@ -1,5 +1,7 @@
 # Node Schemas
 
+For Dify 1.18 additions and Agent output semantics, see [dify-1.18-target.md](dify-1.18-target.md). The shared examples below retain their original 1.16 baseline.
+
 All snippets below show the `data:` payload. Wrap them with the standard node
 wrapper from `dsl-structure.md`.
 
@@ -384,6 +386,8 @@ selected: false
 
 This is the plugin-strategy Agent node used by 0.6.0 and still seen in 0.7.0
 graphs. Preserve its exported strategy/provider fields and dependencies.
+These exports can also use `version: "2"` for parameter encoding. Identify a
+portable Dify Agent by `agent_node_kind: dify_agent`, not the version alone.
 
 ## Agent v2 (DSL 0.7.0)
 

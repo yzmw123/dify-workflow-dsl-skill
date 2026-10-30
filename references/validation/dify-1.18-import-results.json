@@ -1,0 +1,138 @@
+[
+  {
+    "file": "examples/dify-1.16.0/01-text-summarizer.yml",
+    "status": "completed",
+    "error": "",
+    "warnings": [],
+    "persisted": true,
+    "persisted_nodes": 3
+  },
+  {
+    "file": "examples/dify-1.16.0/02-multiturn-chat-assistant.yml",
+    "status": "completed",
+    "error": "",
+    "warnings": [],
+    "persisted": true,
+    "persisted_nodes": 3
+  },
+  {
+    "file": "examples/dify-1.16.0/03-excel-markdown-analysis.yml",
+    "status": "completed",
+    "error": "",
+    "warnings": [],
+    "persisted": true,
+    "persisted_nodes": 5
+  },
+  {
+    "file": "examples/dify-1.16.0/04-priority-routing.yml",
+    "status": "completed",
+    "error": "",
+    "warnings": [],
+    "persisted": true,
+    "persisted_nodes": 6
+  },
+  {
+    "file": "examples/dify-1.16.0/05-question-classifier.yml",
+    "status": "completed",
+    "error": "",
+    "warnings": [],
+    "persisted": true,
+    "persisted_nodes": 5
+  },
+  {
+    "file": "examples/dify-1.16.0/06-array-iteration.yml",
+    "status": "completed",
+    "error": "",
+    "warnings": [],
+    "persisted": true,
+    "persisted_nodes": 6
+  },
+  {
+    "file": "examples/dify-1.16.0/07-quality-loop.yml",
+    "status": "completed",
+    "error": "",
+    "warnings": [],
+    "persisted": true,
+    "persisted_nodes": 5
+  },
+  {
+    "file": "examples/dify-1.16.0/08-human-approval.yml",
+    "status": "completed",
+    "error": "",
+    "warnings": [],
+    "persisted": true,
+    "persisted_nodes": 4
+  },
+  {
+    "file": "examples/dify-1.16.0/09-agent-v2-workflow.yml",
+    "status": "completed",
+    "error": "",
+    "warnings": [],
+    "persisted": true,
+    "persisted_nodes": 3
+  },
+  {
+    "file": "examples/dify-1.16.0/10-agent-app.yml",
+    "status": "completed",
+    "error": "",
+    "warnings": [],
+    "persisted": true
+  },
+  {
+    "file": "examples/dify-1.18.0/01-agent-text.yml",
+    "status": "completed",
+    "error": "",
+    "warnings": [],
+    "persisted": true,
+    "persisted_nodes": 3
+  },
+  {
+    "file": "examples/dify-1.18.0/02-agent-routes.yml",
+    "status": "completed",
+    "error": "",
+    "warnings": [],
+    "persisted": true,
+    "persisted_nodes": 4
+  },
+  {
+    "file": "examples/dify-1.18.0/03-agent-knowledge-skills.yml",
+    "status": "completed-with-warnings",
+    "error": "",
+    "warnings": [
+      {
+        "code": "agent_knowledge_fs_rebind_required",
+        "path": "agent.soul.knowledge.spaces.0",
+        "message": "Agent Knowledge Base 'support' must be reselected in the target workspace.",
+        "details": {
+          "name": "support"
+        }
+      },
+      {
+        "code": "agent_workspace_skill_unresolved",
+        "path": "agent.workspace_skills",
+        "message": "Workspace Skill 'support-guide' is unavailable in the target workspace.",
+        "details": {
+          "name": "support-guide"
+        }
+      }
+    ],
+    "persisted": true
+  },
+  {
+    "file": "examples/dify-1.18.0/04-knowledge-retrieval-v2.yml",
+    "status": "completed-with-warnings",
+    "error": "",
+    "warnings": [
+      {
+        "code": "knowledge_fs_space_unresolved",
+        "path": "workflow.graph.nodes",
+        "message": "A KnowledgeFS Space reference is unavailable in the target workspace and must be reselected before publishing.",
+        "details": {
+          "control_space_id": "00000000-0000-4000-8000-000000000001"
+        }
+      }
+    ],
+    "persisted": true,
+    "persisted_nodes": 3
+  }
+]

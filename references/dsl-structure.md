@@ -1,5 +1,7 @@
 # Dify DSL Structure
 
+For Dify 1.18 additions and Agent output semantics, see [dify-1.18-target.md](dify-1.18-target.md). The shared examples below retain their original 1.16 baseline.
+
 This reference covers app-level structure, graph wiring, variables, dependencies,
 and import/export compatibility.
 

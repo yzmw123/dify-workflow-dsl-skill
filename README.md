@@ -3,28 +3,56 @@
 > Create, repair, review, migrate, and validate Dify App DSL with an AI coding
 > agent.
 
-[中文说明](./README_CN.md) · [10 Dify 1.16 examples](./examples/dify-1.16.0) ·
-[Evaluation report](./references/dify-1.16-evaluation.md)
+[中文说明](./README_CN.md) · [4 Dify 1.18 examples](./examples/dify-1.18.0) ·
+[10 Dify 1.16 examples](./examples/dify-1.16.0) ·
+[1.18 evaluation report](./references/dify-1.18-evaluation.md)
 
-> [!IMPORTANT]
-> **Now supports Dify 1.16.0 and App DSL `0.7.0`, including Agent v2
-> workflow nodes.** Dify 1.16.0 is the latest official release as of
-> 2026-07-21; this repository has been checked against its tagged source and
-> real Console import path. See the
-> [Dify v1.16.0 release](https://github.com/langgenius/dify/releases/tag/1.16.0)
-> and the [evaluation evidence](./references/dify-1.16-evaluation.md).
+> **Targets Dify 1.18 by default, with Dify 1.15/1.16 compatibility.** Both
+> 1.16 and 1.18 use DSL `0.7.0`; select the Dify release with `--dify-version`.
+> [1.18 compatibility](./references/dify-1.18-target.md) ·
+> [Current verification](./references/dify-1.18-evaluation.md)
+
+## What's New — 2026-10-30
+
+- **Dify 1.18 support with legacy profiles.** Select 1.18, 1.16, or 1.15 with
+  `--dify-version`; DSL 0.7.0 defaults to 1.18 and DSL 0.6.0 to 1.15.
+- **Current Agent and knowledge schemas.** Validate Agent system outputs and
+  routes, workspace skills, KnowledgeFS bindings, `knowledge-retrieval-v2`, and
+  portable Site settings. Four new examples demonstrate these features.
+- **Self-contained dependency setup.** `run_validator.py` prepares a reusable
+  virtual environment; `install.sh --setup` can prepare it during installation.
+  Offline setup, JSON output, and the original CLI remain supported.
+
+Compatibility and installation fixes:
+
+- Distinguish legacy plugin Agents using `version: "2"` from portable Dify
+  Agents, and accept missing-resource `file_id: null` placeholders under 1.18.
+- Reject stale route edges after Agent routing is disabled.
+- Restore pip in an interrupted virtual environment and prevent forced
+  installation from overwriting its own source files.
+- Report malformed node types and app modes without interrupting batch
+  validation; use Dify's production resolver for source-based node checks.
+
+**Verified:** 54 local regression tests passed. All 14 maintained examples and
+2 additional compatibility cases passed Dify 1.18.0 source checks. All 14
+examples were persisted through Dify's real database import path; two produced
+three expected warnings about workspace resources that need rebinding. Model
+execution and UI save/re-export round trips remain workspace-level checks.
+See the [verification record](./references/dify-1.18-evaluation.md) for evidence,
+commands, and limitations.
 
 ## 🎯 Version Strategy
 
 > [!IMPORTANT]
-> **Dify 1.16.x → App DSL `"0.7.0"`**
+> **Dify 1.18.x → App DSL `"0.7.0"`**
 >
 > This is the default for new workflows and includes portable **Agent Apps** and
 > **Agent v2 workflow nodes**.
 
 | Target workspace | DSL version | Policy |
 | --- | --- | --- |
-| **Dify 1.16.x** | **`"0.7.0"`** | Default for new generation |
+| **Dify 1.18.x** | **`"0.7.0"`** | Default for new generation |
+| Dify 1.16.x | `"0.7.0"` | Legacy field and output rules |
 | Dify 1.15.x | `"0.6.0"` | Compatibility generation and validation |
 
 If Dify reports that the DSL version is incompatible, first check the target
@@ -43,7 +71,7 @@ Use $dify-workflow-dsl to create this workflow for Dify 1.15.0 using DSL 0.6.0.
 Validate the result against the same target:
 
 ```bash
-python3 scripts/validate_dsl.py --strict --target-version 0.6.0 workflow.yml
+python3 scripts/run_validator.py --strict --dify-version 1.15 workflow.yml
 ```
 
 > [!TIP]
@@ -133,7 +161,7 @@ rendered by Dify itself.
 ```bash
 git clone https://github.com/yzmw123/dify-workflow-dsl-skill.git
 cd dify-workflow-dsl-skill
-bash install.sh --platform codex
+bash install.sh --platform codex --setup
 ```
 
 Supported targets:
@@ -155,7 +183,7 @@ existing installation.
 Create a workflow:
 
 ```text
-Use $dify-workflow-dsl to create a Dify 1.16 workflow.
+Use $dify-workflow-dsl to create a Dify 1.18 workflow.
 Read an uploaded Excel file, convert the table to Markdown, analyze it with an
 LLM, and return the Markdown table plus the analysis.
 ```
@@ -179,37 +207,44 @@ That export is more reliable than a marketplace page or tool name alone.
 
 ## ✅ Validate
 
-Install development dependencies:
+Python 3.10+ is required. The runner installs PyYAML into a cached virtual
+environment on first use and reuses it thereafter. No global Python installation
+is modified. `install.sh --setup` prepares the runtime in advance.
 
 ```bash
-python -m pip install -r requirements-dev.txt
+python3 scripts/run_validator.py --strict --dify-version 1.18 workflow.yml
+python3 scripts/run_validator.py --format json --strict --dify-version 1.18 workflow.yml
+python3 scripts/run_validator.py --strict --dify-version 1.16 old-workflow.yml
+python3 scripts/run_validator.py --strict --dify-version 1.15 old-0.6.yml
 ```
 
-Run local validation and tests:
+Set `DIFY_DSL_VENV_DIR` to select a runtime directory. First setup needs a Python
+package index; offline machines can install local wheels and set
+`DIFY_DSL_OFFLINE=1`. See [runtime setup](./references/runtime.md).
+The original `validate_dsl.py` entrypoint remains available in prepared Python environments.
+
+Run development regression tests in a virtual environment:
 
 ```bash
-python3 scripts/validate_dsl.py --strict --target-version 0.7.0 workflow.yml
-python3 scripts/validate_dsl.py --format json --strict workflow.yml
-python3 -m unittest discover -s tests -v
-python3 scripts/validate_dsl.py \
-  --strict \
-  --target-version 0.7.0 \
-  examples/dify-1.16.0/*.yml
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -m unittest discover -s tests -v
 ```
 
-With a Dify 1.16 Python 3.12 API environment:
+Source validation uses the target Dify API environment (1.18: Python 3.13;
+1.16: Python 3.12):
 
 ```bash
-python scripts/validate_with_dify_source.py \
-  --dify-source /path/to/dify-1.16.0 \
-  examples/dify-1.16.0/*.yml
+/path/to/dify-1.18.0/api/.venv/bin/python scripts/validate_with_dify_source.py \
+  --dify-source /path/to/dify-1.18.0 --dify-version 1.18.0 \
+  examples/dify-1.16.0/*.yml examples/dify-1.18.0/*.yml
 ```
 
-The local validator checks version/mode compatibility, graph endpoints and
-reachability, cycles, branch coverage, container topology, selectors, template
-IDs, Human Input, Agent schemas, dependencies, and common SQL risks. Any YAML
-PyYAML can parse returns structured diagnostics; one bad file does not stop a
-batch.
+New checks cover Agent routes and their edges/selectors, reserved outputs,
+workspace skills, KnowledgeFS bindings and retrieval. Existing graph checks are
+retained. Import `.ifpkg` through Dify, or explicitly export YAML for local
+validation. Official difyctl handles online app operations; this skill authors
+and validates YAML. See [1.18 guidance](./references/dify-1.18-target.md).
 
 ## 🗂️ Repository Map
 
@@ -217,9 +252,11 @@ batch.
 .
 ├── SKILL.md                         # Agent-facing operating rules
 ├── examples/dify-1.16.0/            # 10 maintained DSL 0.7.0 scenarios
+├── examples/dify-1.18.0/            # 4 Dify 1.18 scenarios
 ├── references/                      # Source-backed schemas and patterns
 ├── scripts/
 │   ├── dify_dsl_validator/          # Reusable validator package
+│   ├── run_validator.py             # Isolated dependency bootstrap
 │   ├── validate_dsl.py              # Local deterministic CLI
 │   └── validate_with_dify_source.py # Dify-source compatibility gate
 ├── tests/                           # Fixtures and regression tests

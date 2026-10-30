@@ -1,5 +1,7 @@
 # Dify DSL 完整示例
 
+For Dify 1.18 additions and Agent output semantics, see [dify-1.18-target.md](dify-1.18-target.md). The shared examples below retain their original 1.16 baseline.
+
 These graph examples target new generated DSL with `version: "0.7.0"`. Model provider
 and plugin dependency identifiers are placeholders unless copied from a real
 workspace export; replace them with exact exported identifiers before production

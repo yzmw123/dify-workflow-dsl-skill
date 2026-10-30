@@ -12,13 +12,16 @@ try:
     from dify_dsl_validator import SUPPORTED_VERSIONS, validate_path
 except ImportError as exc:  # pragma: no cover - friendlier error when PyYAML is absent
     if exc.name == "yaml":
-        raise SystemExit("PyYAML is required: python3 -m pip install pyyaml") from exc
+        raise SystemExit("PyYAML is required. Use: python3 scripts/run_validator.py <options> <file.yml>\n"
+                         "This creates an isolated environment automatically; no global pip install is needed.") from exc
     raise
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Validate Dify App DSL 0.6.0 and 0.7.0 YAML files.")
     parser.add_argument("files", nargs="+", type=Path, help="One or more exported/generated YAML files.")
+    parser.add_argument("--dify-version", help="Dify target: 1.15, 1.16, or 1.18 (patch suffix accepted). "
+                        "Default: 1.15 for DSL 0.6.0, otherwise 1.18.")
     parser.add_argument(
         "--target-version",
         choices=SUPPORTED_VERSIONS,
@@ -41,7 +44,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    reports = [validate_path(path, target_version=args.target_version) for path in args.files]
+    reports = [validate_path(path, target_version=args.target_version, dify_version=args.dify_version)
+               for path in args.files]
     if args.output_format == "json":
         payload: object = reports[0].as_dict() if len(reports) == 1 else [report.as_dict() for report in reports]
         print(json.dumps(payload, ensure_ascii=False, indent=2))

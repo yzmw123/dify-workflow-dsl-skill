@@ -2,7 +2,8 @@
 name: dify-workflow-dsl
 description: >
   Create, modify, review, migrate, and debug import-ready Dify App DSL YAML for
-  DSL 0.6.0 and 0.7.0. Use for Workflow, Chatflow, Agent App, Agent v2 workflow
+  Dify 1.18 and legacy 1.15/1.16 targets (DSL 0.6.0 and 0.7.0). Use for
+  Workflow, Chatflow, Agent App, Agent v2 workflow
   nodes, Human Input, graph wiring, variables, plugin dependencies, tools,
   database operations, and import/export compatibility.
 ---
@@ -16,7 +17,8 @@ plugin/tool fields.
 ## Core Workflow
 
 1. Identify the target Dify/DSL version before authoring. For a new file, default
-   to DSL `0.7.0` (Dify 1.16.x). Use `0.6.0` for Dify 1.15.x compatibility.
+   to Dify `1.18` with DSL `0.7.0`. Use `1.16` / `0.7.0` or `1.15` / `0.6.0`
+   for older workspaces. The DSL version alone does not distinguish 1.16 from 1.18.
    Preserve an existing supported version unless the user asks to migrate it.
    Always quote `version`.
 2. Choose the app mode:
@@ -34,7 +36,9 @@ plugin/tool fields.
    plugin. Preserve exact exported identifiers.
 6. Write stable string IDs and connect edges with existing endpoints, matching
    `sourceType`/`targetType`, and valid branch `sourceHandle` values.
-7. Run `python3 scripts/validate_dsl.py --strict --target-version <version> <file.yml>`.
+7. Run `python3 scripts/run_validator.py --strict --dify-version <1.15|1.16|1.18> <file.yml>`.
+   The runner creates a cached virtual environment and installs `requirements.txt`
+   on first use. Python 3.10+ is required; see `references/runtime.md` for offline setup.
    Fix all errors and warnings unless a warning is an intentional, documented
    behavior risk.
 8. When a matching Dify source environment is available, run
@@ -47,11 +51,16 @@ plugin/tool fields.
 | Target | Use | Key capabilities |
 | --- | --- | --- |
 | Dify 1.15.x / compatibility | `"0.6.0"` | Workflow, Chatflow, legacy model-config apps and legacy Agent nodes |
-| Dify 1.16.x / new generation | `"0.7.0"` | Everything above plus top-level Agent App packages and portable Agent v2 workflow nodes |
+| Dify 1.16.x / compatibility | `"0.7.0"` | Everything above plus top-level Agent App packages and portable Agent v2 workflow nodes |
+| Dify 1.18.x / default | `"0.7.0"` | Agent routes, workspace skills, KnowledgeFS bindings and retrieval, portable Site settings |
 
 Do not upgrade by changing only the version string. A 0.7.0 Agent App or Agent v2
 node needs the package structures described below. When the target workspace is
-unknown and import compatibility matters, state the 1.16.x assumption.
+unknown and import compatibility matters, state the 1.18.x assumption. Do not
+claim an untested Dify release is supported merely because its DSL says 0.7.0.
+For Dify 1.18, load `references/dify-1.18-target.md` before authoring Agent or
+KnowledgeFS content. The local validator handles YAML; import `.ifpkg` packages
+through Dify or request an explicit YAML export.
 
 ## DSL 0.7.0 Rules
 
@@ -74,10 +83,13 @@ unknown and import compatibility matters, state the 1.16.x assumption.
 - Portable Agent v2 workflow nodes use `data.type: agent`, `version: "2"`,
   `agent_node_kind: dify_agent`, `agent_binding.package_ref`, and `agent_job`.
   Their referenced package must exist in top-level `agent_packages`.
-- If `agent_job.declared_outputs` is empty, runtime outputs are `text`, `files`,
-  and `json`; otherwise use the declared output names.
-- Agent exports deliberately omit or sanitize credentials, uploaded files,
-  skills, and workspace bindings. Tell the user to review import warnings and
+- Dify 1.18: `text` is a system output alongside custom declared outputs; routing
+  adds `switch`. Never declare `text`, `switch`, or `_session` as custom outputs.
+  Dify 1.16: empty declared outputs mean `text`, `files`, and `json`; otherwise
+  use only the declared names. Preserve the selected version’s semantics.
+- YAML exports deliberately omit or sanitize credentials, uploaded files,
+  skills, and workspace bindings. Dify 1.18 `.ifpkg` can carry supported resource
+  payloads. Use Dify to produce that package format. Review import warnings and
   reconnect missing assets in the target workspace.
 - Human Input uses `delivery_methods`, `form_content`, `inputs`, `user_actions`,
   `timeout`, and `timeout_unit`. Each outgoing edge uses a `user_actions[].id` as
@@ -109,7 +121,12 @@ deterministic.
 
 Load only what is needed:
 
-- `references/official-0.7-target.md`: current 0.7.0 source-backed rules, Agent
+- `references/dify-1.18-target.md`: 1.18 fields, routing/output rules, packages,
+  KnowledgeFS, and official difyctl integration.
+- `references/runtime.md`: isolated dependency setup, cache, and offline recovery.
+- `references/dify-1.18-evaluation.md`: current verification results and scope.
+- `examples/dify-1.18.0/`: new Agent, route, knowledge, and skill-binding examples.
+- `references/official-0.7-target.md`: historical 1.16 rules, Agent
   packages, Agent v2, Human Input, import/export behavior, and generation scale.
 - `references/official-0.6-target.md`: 0.6.0 compatibility baseline.
 - `references/dsl-structure.md`: top-level YAML, variables, graph wrappers,
@@ -172,29 +189,18 @@ parameters, authorization schema, and dependency identity.
 ## Validation
 
 ```bash
-# Human-readable validation
-python3 scripts/validate_dsl.py workflow.yml
+# First run prepares an isolated runtime automatically
+python3 scripts/run_validator.py --strict --dify-version 1.18 workflow.yml
+python3 scripts/run_validator.py --format json --strict --dify-version 1.18 workflow.yml
 
-# Enforce a target version
-python3 scripts/validate_dsl.py --target-version 0.7.0 workflow.yml
+# Explicit legacy targets keep their original field/output rules
+python3 scripts/run_validator.py --strict --dify-version 1.16 legacy-0.7.yml
+python3 scripts/run_validator.py --strict --dify-version 1.15 legacy-0.6.yml
 
-# CI-friendly output; warnings also fail in strict mode
-python3 scripts/validate_dsl.py --format json --strict workflow.yml
-
-# Run the maintained regression set
-python3 -m unittest discover -s tests -v
-
-# Strictly validate the maintained versioned fixtures
-python3 scripts/validate_dsl.py --strict --target-version 0.7.0 tests/fixtures/valid/*.yml
-python3 scripts/validate_dsl.py --strict --target-version 0.6.0 tests/fixtures/valid-0.6/*.yml
-
-# Strictly validate the ten Dify 1.16 scenarios
-python3 scripts/validate_dsl.py --strict --target-version 0.7.0 examples/dify-1.16.0/*.yml
-
-# Optional: run Dify 1.16's own node and Agent models
-python scripts/validate_with_dify_source.py \
-  --dify-source /path/to/dify-1.16.0 \
-  examples/dify-1.16.0/*.yml
+# Source-backed check: use the target checkout's API Python environment
+/path/to/dify-1.18.0/api/.venv/bin/python scripts/validate_with_dify_source.py \
+  --dify-source /path/to/dify-1.18.0 --dify-version 1.18.0 \
+  examples/dify-1.18.0/*.yml
 ```
 
 The validator supports 0.6.0 and 0.7.0 and checks version/mode compatibility,

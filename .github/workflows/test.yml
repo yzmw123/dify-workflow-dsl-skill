@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.12"]
+        python-version: ["3.10", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +21,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-          cache-dependency-path: requirements-dev.txt
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
       - name: Install test dependencies
         run: python -m pip install -r requirements-dev.txt
       - name: Run regression tests
@@ -29,6 +31,15 @@ jobs:
       - name: Validate DSL 0.7 examples strictly
         run: python scripts/validate_dsl.py --strict --target-version 0.7.0 tests/fixtures/valid/*.yml
       - name: Validate Dify 1.16 scenario suite strictly
-        run: python scripts/validate_dsl.py --strict --target-version 0.7.0 examples/dify-1.16.0/*.yml
+        run: python scripts/validate_dsl.py --strict --target-version 0.7.0 --dify-version 1.16 examples/dify-1.16.0/*.yml
+      - name: Validate Dify 1.18 scenarios strictly
+        run: python scripts/validate_dsl.py --strict --dify-version 1.18 examples/dify-1.16.0/*.yml examples/dify-1.18.0/*.yml
       - name: Validate DSL 0.6 examples strictly
         run: python scripts/validate_dsl.py --strict --target-version 0.6.0 tests/fixtures/valid-0.6/*.yml
+      - name: Installed skill cold start and offline reuse
+        shell: bash
+        run: |
+          export DIFY_DSL_VENV_DIR="$RUNNER_TEMP/dify-validator-runtime"
+          bash install.sh --platform codex --target-dir "$RUNNER_TEMP/dify-skill" --setup
+          cd "$RUNNER_TEMP"
+          DIFY_DSL_OFFLINE=1 python dify-skill/scripts/run_validator.py --strict --dify-version 1.18 dify-skill/examples/dify-1.18.0/*.yml
